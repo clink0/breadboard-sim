@@ -1,0 +1,35 @@
+import { Router } from 'express';
+import { compileSketch, getToolchainStatus } from '../lib/arduinoCli.js';
+
+const MAX_SOURCE_BYTES = 200 * 1024;
+
+export const compileRouter = Router();
+
+compileRouter.post('/compile', async (req, res) => {
+  const { source, fqbn } = req.body ?? {};
+
+  if (typeof source !== 'string' || source.trim() === '') {
+    return res.status(400).json({ success: false, error: 'invalid-request', message: 'source is required' });
+  }
+  if (Buffer.byteLength(source, 'utf8') > MAX_SOURCE_BYTES) {
+    return res.status(400).json({ success: false, error: 'invalid-request', message: 'source exceeds 200KB limit' });
+  }
+
+  const toolchain = await getToolchainStatus();
+  if (!toolchain.ready) {
+    return res.status(503).json({
+      success: false,
+      error: 'toolchain-not-ready',
+      message: 'arduino-cli or the arduino:avr core is not installed.',
+      toolchain,
+    });
+  }
+
+  try {
+    const result = await compileSketch({ source, fqbn });
+    res.status(200).json(result);
+  } catch (err) {
+    console.error('Unexpected compile server error:', err);
+    res.status(500).json({ success: false, error: 'internal-error', message: 'The compile server hit an unexpected error.' });
+  }
+});

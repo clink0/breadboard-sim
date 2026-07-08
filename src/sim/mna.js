@@ -1,13 +1,13 @@
 // A small, from-scratch Modified Nodal Analysis solver.
 // This is the same family of technique falstad's circuit simulator uses
-// under the hood for its DC/transient solves - we start with just the DC
-// case here (resistors + independent voltage sources), which is enough to
-// drive the current-flow/voltage visualization. Adding capacitors/inductors
-// later means stepping this in time (companion models) rather than
-// replacing the solver.
+// under the hood for its DC/transient solves. `MnaBuilder` assembles the
+// linear system for one solve (or one Newton-Raphson iteration, for
+// nonlinear devices - see dcSolve.js); `solveLinearSystem` is the plain
+// dense linear-algebra kernel underneath, agnostic to where the matrix
+// came from.
 
 // Gaussian elimination with partial pivoting.
-function solveLinearSystem(A, b) {
+export function solveLinearSystem(A, b) {
   const n = b.length;
   const M = A.map((row) => row.slice());
   const rhs = b.slice();
@@ -38,68 +38,87 @@ function solveLinearSystem(A, b) {
   return x;
 }
 
-// elements: array of
-//   { type: 'R', nodeA, nodeB, value }              resistor, ohms
-//   { type: 'V', nodeA, nodeB, value }               ideal voltage source, volts (+ at nodeA)
-// groundNode: the node name treated as 0V reference.
-// Returns { voltages: Map<node, volts>, sourceCurrents: Map<sourceIndex, amps> }
-export function solveDC(elements, groundNode) {
-  const nodeSet = new Set();
-  for (const el of elements) {
-    nodeSet.add(el.nodeA);
-    nodeSet.add(el.nodeB);
+// Assembles one MNA linear system: unknowns are [nodeVoltages..., sourceCurrents...].
+// `nodes` excludes the ground node. `numVoltageSources` reserves the aux rows/columns
+// used for ideal voltage sources (including VCCS-adjacent devices that need a current
+// unknown - none do here, but the row count is fixed up front like real MNA).
+export class MnaBuilder {
+  constructor(nodes, groundNode, numVoltageSources) {
+    this.nodes = nodes;
+    this.groundNode = groundNode;
+    this.nodeIndex = new Map(nodes.map((n, i) => [n, i]));
+    this.n = nodes.length;
+    this.m = numVoltageSources;
+    const size = this.n + this.m;
+    this.A = Array.from({ length: size }, () => new Array(size).fill(0));
+    this.b = new Array(size).fill(0);
   }
-  nodeSet.delete(groundNode);
-  const nodes = [...nodeSet];
-  const nodeIndex = new Map(nodes.map((n, i) => [n, i]));
 
-  const sources = elements.filter((el) => el.type === 'V');
-  const n = nodes.length;
-  const m = sources.length;
-  const size = n + m;
+  index(node) {
+    return node === this.groundNode ? -1 : this.nodeIndex.get(node);
+  }
 
-  const A = Array.from({ length: size }, () => new Array(size).fill(0));
-  const b = new Array(size).fill(0);
-
-  const idx = (node) => (node === groundNode ? -1 : nodeIndex.get(node));
-
-  for (const el of elements) {
-    if (el.type === 'R') {
-      const g = 1 / el.value;
-      const a = idx(el.nodeA);
-      const bIdx = idx(el.nodeB);
-      if (a >= 0) A[a][a] += g;
-      if (bIdx >= 0) A[bIdx][bIdx] += g;
-      if (a >= 0 && bIdx >= 0) {
-        A[a][bIdx] -= g;
-        A[bIdx][a] -= g;
-      }
+  // Conductance g between two nodes (a resistor, or a device's own-terminal
+  // linearized conductance).
+  stampConductance(nodeA, nodeB, g) {
+    const a = this.index(nodeA);
+    const b = this.index(nodeB);
+    if (a >= 0) this.A[a][a] += g;
+    if (b >= 0) this.A[b][b] += g;
+    if (a >= 0 && b >= 0) {
+      this.A[a][b] -= g;
+      this.A[b][a] -= g;
     }
   }
 
-  sources.forEach((src, k) => {
-    const row = n + k;
-    const a = idx(src.nodeA);
-    const bIdx = idx(src.nodeB);
+  // Independent (or Norton-equivalent) current source, `value` amps flowing
+  // from nodeMinus to nodePlus through the external circuit.
+  stampCurrentSource(nodePlus, nodeMinus, value) {
+    const p = this.index(nodePlus);
+    const m = this.index(nodeMinus);
+    if (p >= 0) this.b[p] -= value;
+    if (m >= 0) this.b[m] += value;
+  }
+
+  // Raw Jacobian entry: "current drawn from `node` increases by `g` amps per
+  // volt at `controlNode`". A 2-terminal device's Jacobian happens to be
+  // expressible as a symmetric pair of these (which is what stampConductance
+  // is), but a 3-terminal nonlinear device (BJT/MOSFET) does not decompose
+  // that way in general - e.g. a BJT's emitter current depends on both the
+  // base-emitter *and* base-collector junctions, so its row can't be built
+  // from a single two-terminal admittance. This is the general primitive the
+  // Newton-Raphson device stamping in dcSolve.js is built on.
+  stampPartial(node, controlNode, g) {
+    const r = this.index(node);
+    const c = this.index(controlNode);
+    if (r >= 0 && c >= 0) this.A[r][c] += g;
+  }
+
+  // Injects `amps` of current into `node` from an independent source (the
+  // constant term of a device's linearized current, after the `stampPartial`
+  // calls above have accounted for its voltage-dependent part).
+  injectCurrent(node, amps) {
+    const idx = this.index(node);
+    if (idx >= 0) this.b[idx] += amps;
+  }
+
+  // Ideal voltage source aux row/column (ith source, 0-indexed).
+  stampVoltageSourceRow(sourceIndex, nodeA, nodeB, value) {
+    const row = this.n + sourceIndex;
+    const a = this.index(nodeA);
+    const b = this.index(nodeB);
     if (a >= 0) {
-      A[a][row] += 1;
-      A[row][a] += 1;
+      this.A[a][row] += 1;
+      this.A[row][a] += 1;
     }
-    if (bIdx >= 0) {
-      A[bIdx][row] -= 1;
-      A[row][bIdx] -= 1;
+    if (b >= 0) {
+      this.A[b][row] -= 1;
+      this.A[row][b] -= 1;
     }
-    b[row] = src.value;
-  });
+    this.b[row] = value;
+  }
 
-  const x = solveLinearSystem(A, b);
-
-  const voltages = new Map();
-  voltages.set(groundNode, 0);
-  nodes.forEach((node, i) => voltages.set(node, x[i]));
-
-  const sourceCurrents = new Map();
-  sources.forEach((src, k) => sourceCurrents.set(src.id, x[n + k]));
-
-  return { voltages, sourceCurrents };
+  getSystem() {
+    return { A: this.A, b: this.b };
+  }
 }

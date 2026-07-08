@@ -23,7 +23,11 @@ class UnionFind {
 
 function holeNode(holeId) {
   const [row, col] = holeId.split('-');
-  return baseNodeForHole(row, Number(col));
+  // col stays a string here - baseNodeForHole only ever interpolates it into
+  // a template string (`T${col}`), which is behavior-identical whether col
+  // is a number or numeric string; keeping it a string lets non-numeric
+  // "columns" (e.g. an Arduino pin name like "D13") work the same way.
+  return baseNodeForHole(row, col);
 }
 
 // Given the list of placed wires (each { fromHole, toHole }), returns:

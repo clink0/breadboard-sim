@@ -21,6 +21,7 @@ const TERMINAL_BOT = ['f', 'g', 'h', 'i', 'j'];
 // A hole id is `${row}-${col}`. Returns the *base* node id that hole belongs
 // to before any wires/components are placed (rails + per-column strips).
 export function baseNodeForHole(row, col) {
+  if (row === 'arduino') return `ARDUINO_${col}`; // each pin is already its own unique node
   if (row === 'railTopPlus' || row === 'railBotPlus') return 'RAIL_PLUS';
   if (row === 'railTopMinus' || row === 'railBotMinus') return 'RAIL_MINUS';
   if (TERMINAL_TOP.includes(row)) return `T${col}`; // top strip node for this column
@@ -31,7 +32,7 @@ export function baseNodeForHole(row, col) {
 // Generates every hole with its pixel position, for rendering.
 export function generateHoles() {
   const holes = [];
-  let y = 0;
+  let y = HOLE_PITCH;
   for (const row of ROWS) {
     if (row === 'e') y += ROW_GAP; // gap below top rails before terminal strips
     if (row === 'f') y += ROW_GAP; // center gap between the two terminal groups

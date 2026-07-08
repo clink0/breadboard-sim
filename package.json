@@ -4,17 +4,25 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently -n web,compiler -c blue,green \"vite\" \"node server/index.js\"",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
+    "avr8js": "^0.21.0",
+    "monaco-editor": "^0.55.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zustand": "^4.5.2"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
-    "vite": "^5.4.0"
+    "concurrently": "^10.0.3",
+    "express": "^5.2.1",
+    "vite": "^5.4.0",
+    "vite-plugin-monaco-editor": "^1.1.0",
+    "vitest": "^4.1.9"
   }
 }
