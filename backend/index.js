@@ -24,9 +24,15 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN;
 const app = express();
 app.use(cors({ origin: CORS_ORIGIN ? CORS_ORIGIN.split(',') : true }));
 app.use(express.json({ limit: '1mb' }));
-app.use(compileRouter);
-app.use(toolchainStatusRouter);
-app.use(chatRouter);
+// Mounted under /api so these match what the frontend actually calls
+// (web-ui/src/utils/apiBase.js builds `${API_BASE}/api/...`). In dev, Vite's
+// proxy (web-ui/vite.config.js) forwards /api/* here unchanged - no path
+// rewriting on either side, so the same paths work identically whether
+// VITE_API_BASE_URL is unset (dev, via the proxy) or pointed at a real
+// hosted backend (prod, direct).
+app.use('/api', compileRouter);
+app.use('/api', toolchainStatusRouter);
+app.use('/api', chatRouter);
 
 // Bind 0.0.0.0 (not 127.0.0.1) so this is reachable once hosted, not just
 // from the same machine - see DEPLOYMENT.md for the production posture

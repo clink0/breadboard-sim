@@ -27,10 +27,15 @@ export default defineConfig({
   envDir: path.resolve(__dirname, '..'),
   server: {
     proxy: {
+      // No path rewrite - backend/index.js mounts its routes under /api too,
+      // so /api/chat here forwards straight to /api/chat there. Keeping dev
+      // and prod (VITE_API_BASE_URL pointed directly at a hosted backend,
+      // no proxy involved) hitting the exact same paths is the point - a
+      // rewrite here would only work in dev and silently 404 in prod, which
+      // is exactly the bug this replaced.
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },
