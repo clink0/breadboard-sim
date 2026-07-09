@@ -5,6 +5,7 @@ import { buildCircuitContext } from '../utils/circuitContext';
 import { validateCircuitPatch } from '../utils/validateCircuitPatch';
 import { findShortedComponents } from '../utils/detectShorts';
 import { API_BASE } from '../utils/apiBase';
+import { getAuthHeaders } from '../utils/authFetch';
 
 // Only {role, content} is meaningful to the API - assistant messages also
 // carry a local-only `applied` summary (see applyActions below) for the
@@ -94,7 +95,7 @@ export const useChatStore = create((set, get) => ({
     try {
       const res = await fetch(`${API_BASE}/api/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
         body: JSON.stringify({ messages: toApiMessages(messages), circuitContext }),
       });
       const result = await res.json();

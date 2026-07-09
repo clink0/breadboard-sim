@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { STARTER_SKETCH } from 'shared/starterSketch.js';
 import { API_BASE } from '../utils/apiBase';
+import { getAuthHeaders } from '../utils/authFetch';
 
 export const useArduinoStore = create((set, get) => ({
   sketch: STARTER_SKETCH,
@@ -27,7 +28,7 @@ export const useArduinoStore = create((set, get) => ({
     try {
       const res = await fetch(`${API_BASE}/api/compile`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
         body: JSON.stringify({ source: sketch }),
       });
       const result = await res.json();
