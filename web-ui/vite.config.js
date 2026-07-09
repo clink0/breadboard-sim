@@ -2,16 +2,24 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import monacoEditorPluginModule from 'vite-plugin-monaco-editor';
-
-// CJS/ESM interop: the plugin ships as a CJS `exports.default`, which Vite's
-// ESM config loader surfaces as `.default` rather than the bare import.
-const monacoEditorPlugin = monacoEditorPluginModule.default ?? monacoEditorPluginModule;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  plugins: [react(), monacoEditorPlugin({ languageWorkers: ['typescript', 'json'] })],
+  plugins: [react()],
+  // Monaco's worker (src/components/CodeEditor.jsx) is wired up via Vite's
+  // native `?worker` import instead of vite-plugin-monaco-editor - that
+  // plugin predates monaco-editor's package.json "exports" map and
+  // require.resolve()s worker files without a .js extension, which only
+  // ever worked under Node's legacy (non-exports) extension-guessing.
+  // Under a real `vite build` (its writeBundle hook, never exercised by
+  // `vite dev`) that now hard-fails: "Cannot find module
+  // '.../monaco-editor/esm/vs/language/typescript/ts.worker'". We also
+  // don't need that plugin's typescript/json language workers anyway -
+  // this editor only ever uses the `cpp` language with custom-registered
+  // completion/hover providers (see CodeEditor.jsx), which run on the main
+  // thread and don't need a language-service worker at all.
+  worker: { format: 'es' },
   // This workspace lives at <repo root>/web-ui, but the single .env the app
   // has always used (see FIREBASE_SETUP.md) lives at the repo root - point
   // Vite there instead of its default (same dir as this config file), so

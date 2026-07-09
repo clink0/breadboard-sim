@@ -1,11 +1,21 @@
 import React from 'react';
 import Editor, { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
+import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import { ARDUINO_FUNCTIONS, ARDUINO_CONSTANTS } from '../arduino/arduinoApiDocs';
 
 // Self-host Monaco from the local package instead of its CDN default,
 // consistent with this app's fully-local toolchain.
 loader.config({ monaco });
+
+// Only the plain editor worker is needed - this editor only ever uses the
+// `cpp` language (below) with our own completion/hover providers, which run
+// on the main thread, not one of Monaco's dedicated language-service
+// workers (typescript/json/etc). See vite.config.js for why this is wired
+// up via Vite's native `?worker` import rather than vite-plugin-monaco-editor.
+self.MonacoEnvironment = {
+  getWorker: () => new EditorWorker(),
+};
 
 let providersRegistered = false;
 function registerArduinoLanguageSupport() {
