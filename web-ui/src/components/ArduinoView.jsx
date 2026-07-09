@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
 import CodeEditor from './CodeEditor';
 import LedIndicators from './LedIndicators';
+import SignInPrompt from './SignInPrompt';
 import { useArduinoStore } from '../state/arduinoStore';
+import { useAuthStore } from '../state/authStore';
 
 // Note: the live avr8js run loop (useAvrLiveRun) is owned by App.jsx, not
 // here - it must stay mounted while the user switches to the Breadboard
@@ -18,6 +20,7 @@ export default function ArduinoView({ led12Ref, led13Ref }) {
   const running = useArduinoStore((s) => s.running);
   const setRunning = useArduinoStore((s) => s.setRunning);
   const fetchToolchainStatus = useArduinoStore((s) => s.fetchToolchainStatus);
+  const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
     fetchToolchainStatus();
@@ -26,9 +29,13 @@ export default function ArduinoView({ led12Ref, led13Ref }) {
   return (
     <div className="arduino-view">
       <div className="arduino-toolbar">
-        <button className="run-button" onClick={compile} disabled={compileStatus === 'compiling'}>
-          {compileStatus === 'compiling' ? 'Compiling…' : 'Compile'}
-        </button>
+        {user ? (
+          <button className="run-button" onClick={compile} disabled={compileStatus === 'compiling'}>
+            {compileStatus === 'compiling' ? 'Compiling…' : 'Compile'}
+          </button>
+        ) : (
+          <SignInPrompt message="Sign in to compile." />
+        )}
         {!running ? (
           <button className="run-button" onClick={() => setRunning(true)} disabled={!hex}>Run</button>
         ) : (

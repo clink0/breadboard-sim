@@ -1,11 +1,25 @@
 import { Router } from 'express';
 import { compileSketch, getToolchainStatus } from '../lib/arduinoCli.js';
+import { requireAuth } from '../lib/requireAuth.js';
+import { createRateLimiter } from '../lib/rateLimit.js';
 
 const MAX_SOURCE_BYTES = 200 * 1024;
 
 export const compileRouter = Router();
 
-compileRouter.post('/compile', async (req, res) => {
+const compileRateLimiter = createRateLimiter({
+  windowMinutes: 15,
+  max: 20,
+  message: 'Too many compile requests - try again in a few minutes.',
+});
+
+// Gated: this shells out to a real compiler process on arbitrary user input,
+// so it requires sign-in and is rate-limited per account. Middleware is
+// attached directly to this route (not via compileRouter.use(...)) since
+// this router is mounted at the app root alongside toolchainStatusRouter -
+// a router-level .use() with no path would run for every request that
+// reaches this router, not just /compile.
+compileRouter.post('/compile', requireAuth, compileRateLimiter, async (req, res) => {
   const { source, fqbn } = req.body ?? {};
 
   if (typeof source !== 'string' || source.trim() === '') {

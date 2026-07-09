@@ -80,32 +80,41 @@ npm install firebase
 
 This one package covers both Firestore and Auth (and anything else Firebase, if we need it later) via modular imports like `firebase/app`, `firebase/firestore`, `firebase/auth`.
 
-## 7. (Optional, later) Server-side admin access
+## 7. Server-side admin access (required — the backend needs this to verify sign-in)
 
-Skip this for now unless we decide the Express server needs privileged Firestore access (e.g. bypassing security rules for moderation, or a one-off script to bulk-import the existing local tutorials into Firestore).
+The backend (`backend/lib/requireAuth.js`) verifies each request's Firebase ID token before allowing `/api/chat` or `/api/compile` through — that verification needs admin credentials, not the client config from step 2.
 
-If/when needed:
 1. **Project settings (gear icon) → Service accounts → Generate new private key**. This downloads a JSON file.
-2. This file **is** a real secret (full admin access to your Firebase project) — save it somewhere git-ignored, e.g. `server/firebase-service-account.json`, and confirm it's covered by `.gitignore` before doing anything else.
-3. We'd point the server at it via an env var (e.g. `FIREBASE_SERVICE_ACCOUNT_PATH=./server/firebase-service-account.json`) and use the `firebase-admin` npm package server-side.
+2. This file **is** a real secret (full admin access to your Firebase project). Don't commit it — if you save a copy locally for reference, put it somewhere already git-ignored (e.g. `backend/` is fine since `node_modules`/`dist` there are ignored, but the JSON itself isn't — safest is just to not save it in the repo tree at all, keep it in Downloads or a password manager).
+3. Base64-encode it into a single line and add that as `FIREBASE_SERVICE_ACCOUNT_BASE64` in your root `.env`:
+
+   ```
+   # macOS
+   base64 -i /path/to/downloaded-service-account.json | pbcopy
+   ```
+
+   Then paste the clipboard contents as the value:
+
+   ```
+   FIREBASE_SERVICE_ACCOUNT_BASE64=eyJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsIC...
+   ```
+
+   (Base64, not the raw file path — a single env var is simplest to hand to Fly.io/Railway as a secret later, no file-mounting needed. `backend/lib/firebaseAdmin.js` decodes and parses it at request time.)
 
 ## Checklist
 
 - [ ] Firebase project created (Analytics off)
 - [ ] Web app registered, `firebaseConfig` copied somewhere handy
 - [ ] Firestore enabled (test mode, location picked)
-- [ ] Authentication enabled (Email/Password at minimum)
+- [ ] Authentication enabled (Email/Password at minimum; Google recommended — the sign-in modal supports both)
 - [ ] `.env` has all 6 `VITE_FIREBASE_*` values filled in
+- [ ] Service account generated, base64-encoded into `.env` as `FIREBASE_SERVICE_ACCOUNT_BASE64`
 - [ ] `.env.example` updated with the same (blank) keys
-- [ ] `npm install firebase` run
+- [ ] `npm install` run (picks up `firebase`, `firebase-admin`, `express-rate-limit`)
 - [ ] `.env` confirmed git-ignored
 
 ## What's next
 
-Once this is done, the actual integration work is:
-- A small `src/firebase.js` initializing the app/Firestore/Auth from these env vars.
-- Rewriting `src/tutorials/tutorialRepository.js`'s internals to read/write Firestore instead of `localStorage`/bundled JSON — everything else in the app (stores, components) talks to that module and won't need to change, that's what it was built for.
-- Real Firestore security rules once the collections/documents are designed (replacing today's 30-day test-mode rules).
-- Auth UI (sign in/out) somewhere in the app.
+Auth is fully wired in now (client sign-in UI, `web-ui/src/state/authStore.js`; backend token verification + rate limiting, `backend/lib/requireAuth.js`/`rateLimit.js`) — AI Tutor and Arduino Compile both require sign-in, everything else in the app stays free to use. Once you've completed the checklist above, `npm run dev` and sign in via the button in the top bar to confirm both features work.
 
-That's a separate implementation pass — ping me once the checklist above is done and we'll do it properly (probably worth planning out the Firestore data model together first).
+Still ahead, separately: actually persisting tutorials/favorites to Firestore instead of `localStorage` (today's `web-ui/src/tutorials/tutorialRepository.js` seam makes that a contained swap when we get to it) and real Firestore security rules once that data model exists.

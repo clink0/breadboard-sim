@@ -2,8 +2,16 @@ import { Router } from 'express';
 import { sendChatMessage } from '../lib/anthropic.js';
 import { TUTOR_SYSTEM_PROMPT } from '../lib/tutorPersona.js';
 import { CIRCUIT_TOOLS } from '../lib/circuitTools.js';
+import { requireAuth } from '../lib/requireAuth.js';
+import { createRateLimiter } from '../lib/rateLimit.js';
 
 export const chatRouter = Router();
+
+const chatRateLimiter = createRateLimiter({
+  windowMinutes: 15,
+  max: 30,
+  message: 'Too many chat requests - try again in a few minutes.',
+});
 
 function isValidMessage(m) {
   return !!m
@@ -12,7 +20,12 @@ function isValidMessage(m) {
     && m.content.trim() !== '';
 }
 
-chatRouter.post('/chat', async (req, res) => {
+// Gated: this calls the paid Anthropic API on arbitrary user input, so it
+// requires sign-in and is rate-limited per account. Middleware is attached
+// directly to this route, not via chatRouter.use(...) - see the comment in
+// routes/compile.js for why (this router is mounted at the app root
+// alongside toolchainStatusRouter).
+chatRouter.post('/chat', requireAuth, chatRateLimiter, async (req, res) => {
   const { messages, circuitContext } = req.body ?? {};
 
   if (!Array.isArray(messages) || messages.length === 0 || !messages.every(isValidMessage)) {

@@ -16,14 +16,14 @@ Either works the same way here: build `backend/Dockerfile` with the **repo root 
 1. Install `flyctl`, then `fly auth login`.
 2. From the repo root: `fly launch --dockerfile backend/Dockerfile --no-deploy` (say no to Postgres/Redis prompts - this app doesn't need them). This generates a `fly.toml` - accept the repo root as the app's working directory.
 3. Confirm `fly.toml` has `[build] dockerfile = "backend/Dockerfile"` and that the app's internal port matches what the Dockerfile exposes (`3001`) - set `[[services]] internal_port = 3001` if `fly launch` didn't infer it.
-4. Set secrets: `fly secrets set ANTHROPIC_API_KEY=sk-ant-... CORS_ORIGIN=https://your-app.vercel.app` (you can update `CORS_ORIGIN` again after step 2 once you know the real Vercel URL - a placeholder is fine for now).
+4. Set secrets: `fly secrets set ANTHROPIC_API_KEY=sk-ant-... CORS_ORIGIN=https://your-app.vercel.app FIREBASE_SERVICE_ACCOUNT_BASE64=...` (you can update `CORS_ORIGIN` again after step 2 once you know the real Vercel URL - a placeholder is fine for now; `FIREBASE_SERVICE_ACCOUNT_BASE64` is the same value from your local `.env` - see `FIREBASE_SETUP.md` step 7. Without it, `/api/chat` and `/api/compile` will 503 on every request - both require sign-in now.)
 5. `fly deploy`.
 6. Note the resulting URL (`https://<your-app>.fly.dev`) - you'll need it in step 2.
 
 ### Railway (alternative)
 1. New Project → Deploy from GitHub repo.
 2. In the service's settings, set **Root Directory** to the repo root (not `backend/`) and **Dockerfile Path** to `backend/Dockerfile` - same reasoning as Fly.io, the build needs the monorepo root as context.
-3. Set the same env vars (`ANTHROPIC_API_KEY`, `CORS_ORIGIN`) under Variables. Railway injects `PORT` automatically - `backend/index.js` already reads `process.env.PORT`.
+3. Set the same env vars (`ANTHROPIC_API_KEY`, `CORS_ORIGIN`, `FIREBASE_SERVICE_ACCOUNT_BASE64`) under Variables. Railway injects `PORT` automatically - `backend/index.js` already reads `process.env.PORT`.
 4. Deploy, note the generated `*.up.railway.app` URL.
 
 ## 2. Frontend (Vercel)
@@ -44,12 +44,14 @@ Go back to the backend host and update `CORS_ORIGIN` to the *real* Vercel URL fr
 
 Against the real Vercel URL, not localhost:
 - [ ] Site loads, no console errors.
-- [ ] AI Tutor: send a message, get a real (not error) response - confirms `ANTHROPIC_API_KEY` and `VITE_API_BASE_URL`/CORS are all correctly wired.
+- [ ] Signed out: AI Tutor and Arduino Compile both show a "sign in" prompt instead of their normal controls - confirms the frontend correctly gates on auth state.
+- [ ] Sign in (top bar) with both Email/Password and Google if you enabled it.
+- [ ] AI Tutor: send a message, get a real (not error) response - confirms `ANTHROPIC_API_KEY`, `FIREBASE_SERVICE_ACCOUNT_BASE64`, and `VITE_API_BASE_URL`/CORS are all correctly wired.
 - [ ] Arduino IDE: Compile the default sketch, confirm it succeeds - confirms the backend's Docker image actually has a working `arduino-cli` + AVR core, not just that the container started.
-- [ ] Place a component on the breadboard and hit Simulate - this is pure client-side (no backend involved), but worth confirming nothing in the build broke it.
+- [ ] Place a component on the breadboard and hit Simulate - this is pure client-side (no backend involved, no sign-in needed), but worth confirming nothing in the build broke it.
 
-If Compile fails with a 503 (`toolchain-not-ready`), the image build likely had an issue installing `arduino-cli`/the AVR core - check that step's logs specifically, that's the part of the Dockerfile most likely to need iteration across different base images/hosts.
+If Compile fails with a 503 (`toolchain-not-ready`), the image build likely had an issue installing `arduino-cli`/the AVR core - check that step's logs specifically, that's the part of the Dockerfile most likely to need iteration across different base images/hosts. A 503 with `auth-not-configured` instead means `FIREBASE_SERVICE_ACCOUNT_BASE64` isn't set on the backend host. A 401 while signed in usually means the browser's ID token expired mid-session - refresh and try again.
 
-## Known gap (carried over from the plan, not fixed here)
+## Hardening status
 
-`/compile` is now a public endpoint that shells out to a real compiler on arbitrary input. It already caps source size (200KB) and has a 30s timeout, but has no rate limiting or auth. Worth locking down (e.g. require Firebase Auth sign-in to hit `/compile`) once real traffic - or real abuse - becomes a concern, not before.
+`/api/chat` and `/api/compile` both require a valid Firebase ID token (`backend/lib/requireAuth.js`) and are rate-limited per account (`backend/lib/rateLimit.js` - 30 chat / 20 compile requests per 15 min, tunable, not precious). `/api/toolchain-status` stays open (cheap read-only probe). Not yet done: per-user quotas beyond the flat rate limit, and any moderation/admin tooling - fine for now, worth revisiting if real abuse shows up.

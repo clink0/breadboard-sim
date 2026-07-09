@@ -2,6 +2,8 @@ import React, { useRef, useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useChatStore } from '../state/chatStore';
+import { useAuthStore } from '../state/authStore';
+import SignInPrompt from './SignInPrompt';
 
 // react-markdown renders straight to React elements (no dangerouslySetInnerHTML,
 // no raw-HTML passthrough unless rehype-raw is added - which it isn't), so
@@ -55,6 +57,7 @@ export default function TutorChat() {
   const error = useChatStore((s) => s.error);
   const sendMessage = useChatStore((s) => s.sendMessage);
   const resetChat = useChatStore((s) => s.resetChat);
+  const user = useAuthStore((s) => s.user);
 
   const [draft, setDraft] = useState('');
   const listRef = useRef(null);
@@ -96,19 +99,25 @@ export default function TutorChat() {
         {error && <div className="tutor-error">{error}</div>}
       </div>
 
-      <div className="tutor-input-row">
-        <textarea
-          className="tutor-input"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Ask about your circuit..."
-          rows={2}
-        />
-        <button className="run-button" onClick={submit} disabled={sending || !draft.trim()}>Send</button>
-      </div>
-      {messages.length > 0 && (
-        <button className="tutor-reset" onClick={resetChat}>New conversation</button>
+      {user ? (
+        <>
+          <div className="tutor-input-row">
+            <textarea
+              className="tutor-input"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask about your circuit..."
+              rows={2}
+            />
+            <button className="run-button" onClick={submit} disabled={sending || !draft.trim()}>Send</button>
+          </div>
+          {messages.length > 0 && (
+            <button className="tutor-reset" onClick={resetChat}>New conversation</button>
+          )}
+        </>
+      ) : (
+        <SignInPrompt message="Sign in to use the AI Tutor." />
       )}
     </div>
   );

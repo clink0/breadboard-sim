@@ -758,6 +758,16 @@ button {
   font-style: italic;
 }
 
+.sign-in-prompt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sign-in-prompt .empty-hint {
+  margin: 0;
+}
+
 .netlist-list {
   list-style: none;
   margin: 0;
