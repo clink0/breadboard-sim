@@ -511,12 +511,16 @@ button {
   height: 100%;
   overflow: hidden;
   cursor: grab;
-  background-color: #1863b3;
+  /* Darkened toward Falstad's near-black void - the breadboard body itself
+     (.board-body below) keeps its own cream color, that's the part of this
+     app's identity as a *breadboard* simulator worth keeping recognizable;
+     only the surrounding canvas changes. */
+  background-color: #08090c;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.16) 1px, transparent 1px),
-    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
   background-repeat: repeat;
 }
 
@@ -690,8 +694,19 @@ button {
 }
 
 .current-dot {
-  fill: var(--cyan);
-  filter: drop-shadow(0 0 2px var(--cyan));
+  fill: #f4e04d;
+  filter: drop-shadow(0 0 4px #f4e04d);
+}
+
+/* Falstad-style pop: a soft glow on any wire/component lead currently
+   carrying real current, in addition to its own voltage color. A neutral
+   white-ish glow (not tied to the specific voltage color, which is set via
+   inline `stroke` and so isn't available to `currentColor` here) so it
+   reads consistently regardless of the exact hue. */
+.is-energized .lead-line,
+.is-energized .wire-line,
+.is-energized .component-glyph {
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.55));
 }
 
 .selected-panel {
@@ -812,42 +827,108 @@ button {
   gap: 12px;
 }
 
-.oscilloscope-svg {
-  width: 100%;
+.oscilloscope-readout {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.scope-panel-grid {
   flex: 1;
   min-height: 0;
-  background: #0c0e12;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.scope-panel {
+  flex-shrink: 0;
+  width: 232px;
+  background: #05070a;
   border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 6px 6px 4px;
+}
+
+.scope-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.scope-panel-max {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scope-panel-controls {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.scope-panel-icon-button {
+  background: transparent;
+  color: var(--text-dim);
+  border: none;
+  border-radius: 4px;
+  width: 20px;
+  height: 20px;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0;
+}
+
+.scope-panel-icon-button:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.scope-panel-label {
+  font-size: 10.5px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.scope-panel-settings {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.scope-panel-svg {
+  width: 100%;
+  display: block;
+  background: #05070a;
   border-radius: 4px;
 }
 
-.scope-grid-line {
+.scope-panel-zero-line {
   stroke: var(--panel-border);
   stroke-width: 1;
 }
 
-.scope-axis-label {
-  font-family: var(--font-mono);
-  font-size: 8px;
-  fill: var(--text-dim);
-}
-
-.scope-trace {
+.scope-panel-trace {
   fill: none;
   stroke-width: 1.5;
 }
 
-.oscilloscope-legend {
-  display: flex;
-  gap: 14px;
+.scope-panel-trace-voltage {
+  stroke: #4ce35c;
 }
 
-.scope-legend-item {
-  display: flex;
-  align-items: center;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-dim);
+.scope-panel-trace-current {
+  stroke: #e8d34c;
 }
 
 .view-toggle {

@@ -3,7 +3,9 @@ import { DEVICE_TYPES } from '../sim/devices';
 
 const TRANSISTOR_TYPES = ['bjt_npn', 'bjt_pnp', 'mosfet_n', 'mosfet_p'];
 
-function componentValueSuffix(c) {
+// Exported for reuse by Oscilloscope.jsx's per-panel labels (e.g.
+// "resistor, 220Ω") - same formatting, one source of truth.
+export function componentValueSuffix(c) {
   switch (c.type) {
     case 'resistor':  return ` (${formatOhms(c.value)})`;
     case 'battery':   return ` (${c.value}V)`;
@@ -65,12 +67,13 @@ export function buildCircuitContext({
     lines.push('Simulation: not running - the student has not pressed Simulate yet.');
   }
 
-  const hasCapture = scopeResult?.probeVoltages?.size > 0 && (scopeResult.time?.length ?? 0) > 1;
+  const hasCapture = scopeResult?.voltages?.size > 0 && (scopeResult.time?.length ?? 0) > 1;
   if (hasCapture) {
+    const probeCount = components.filter((c) => c.type === 'probe').length;
     const span = scopeResult.time[scopeResult.time.length - 1] - scopeResult.time[0];
     const convergenceNote = scopeResult.converged === false ? ' (transient solve did not converge)' : '';
     lines.push('');
-    lines.push(`Oscilloscope: captured ${scopeResult.probeVoltages.size} probe channel(s) over ${(span * 1000).toFixed(2)}ms${convergenceNote}`);
+    lines.push(`Oscilloscope: captured ${probeCount} probe channel(s) (plus per-component voltage/current for every other placed part) over ${(span * 1000).toFixed(2)}ms${convergenceNote}`);
   }
 
   if (view === 'arduino' && arduino) {

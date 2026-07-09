@@ -4,7 +4,7 @@ import { TERMINALS } from 'shared/deviceTerminals.js';
 import { DEVICE_TYPES } from '../sim/devices';
 import { findShortedComponents } from '../utils/detectShorts';
 
-const EMPTY_SCOPE_RESULT = { time: new Float64Array([0]), probeVoltages: new Map(), converged: true, firstDivergedStep: null };
+const EMPTY_SCOPE_RESULT = { time: new Float64Array([0]), voltages: new Map(), currents: new Map(), converged: true, firstDivergedStep: null };
 
 let idCounter = 1;
 const nextId = () => `el-${idCounter++}`;
@@ -40,6 +40,7 @@ export const useCircuitStore = create((set, get) => ({
   running: false,
   liveSource: null, // null | 'dc' | 'arduino' - which of DC Simulate / Arduino live-run is currently driving `running`/`simResult`
   scopeResult: EMPTY_SCOPE_RESULT,
+  scopedComponentIds: [], // non-probe component ids explicitly added to the oscilloscope via Inspector's "Add to Scope" - probes are auto-included regardless, see Oscilloscope.jsx
 
   setPage: (page) => set({ page }),
 
@@ -52,6 +53,13 @@ export const useCircuitStore = create((set, get) => ({
   selectElement: (id) => set({ selectedId: id }),
 
   dismissShortWarning: () => set({ shortWarning: null }),
+
+  toggleScope: (id) =>
+    set((s) => ({
+      scopedComponentIds: s.scopedComponentIds.includes(id)
+        ? s.scopedComponentIds.filter((x) => x !== id)
+        : [...s.scopedComponentIds, id],
+    })),
 
   clickHole: (holeId) => {
     const { tool, pendingHoles } = get();
@@ -113,6 +121,7 @@ export const useCircuitStore = create((set, get) => ({
       components: s.components.filter((c) => c.id !== id),
       wires: s.wires.filter((w) => w.id !== id),
       selectedId: s.selectedId === id ? null : s.selectedId,
+      scopedComponentIds: s.scopedComponentIds.filter((x) => x !== id),
     })),
 
   reset: () => set({
@@ -125,6 +134,7 @@ export const useCircuitStore = create((set, get) => ({
     liveSource: null,
     simResult: { voltages: new Map(), currents: new Map(), deviceInfo: new Map(), converged: true, nodeFor: () => null },
     scopeResult: EMPTY_SCOPE_RESULT,
+    scopedComponentIds: [],
   }),
 
   runSimulation: () => {

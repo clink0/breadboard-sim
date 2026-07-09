@@ -185,7 +185,7 @@ const FALLBACK_FREQ_HZ = 10;
 const MAX_STEPS = 20000;
 
 function emptyScopeResult() {
-  return { time: new Float64Array([0]), probeVoltages: new Map(), converged: true, firstDivergedStep: null };
+  return { time: new Float64Array([0]), voltages: new Map(), currents: new Map(), converged: true, firstDivergedStep: null };
 }
 
 export function captureTransient(components, wires) {
@@ -226,8 +226,10 @@ export function captureTransient(components, wires) {
   const startTime = result.time[startIdx];
 
   const time = result.time.slice(startIdx).map((t) => t - startTime);
-  const probeVoltages = new Map();
-  for (const [id, arr] of result.probeVoltages) probeVoltages.set(id, arr.slice(startIdx));
+  const voltages = new Map();
+  for (const [id, arr] of result.voltages) voltages.set(id, arr.slice(startIdx));
+  const currents = new Map();
+  for (const [id, arr] of result.currents) currents.set(id, arr.slice(startIdx));
 
-  return { time, probeVoltages, converged: result.converged, firstDivergedStep: result.firstDivergedStep };
+  return { time, voltages, currents, converged: result.converged, firstDivergedStep: result.firstDivergedStep };
 }

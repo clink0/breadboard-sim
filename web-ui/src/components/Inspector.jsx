@@ -20,6 +20,12 @@ const OFFSET_PRESETS    = [0, 1, 2.5];
 
 const TRANSISTOR_TYPES = ['bjt_npn', 'bjt_pnp', 'mosfet_n', 'mosfet_p'];
 
+// Types with an unambiguous 2-terminal voltage-across meaning that the
+// oscilloscope can trace (see transientSolve.js) - LEDs/transistors are
+// deferred (ambiguous or already multi-terminal semantics, and the
+// Inspector already shows transistor operating points separately).
+const SCOPE_ELIGIBLE_TYPES = ['resistor', 'capacitor', 'inductor', 'motor', 'servo', 'battery', 'function_gen'];
+
 function PresetButtons({ presets, value, onSelect }) {
   return (
     <div className="preset-row">
@@ -45,6 +51,8 @@ export default function Inspector() {
   const removeElement     = useCircuitStore((s) => s.removeElement);
   const running           = useCircuitStore((s) => s.running);
   const simResult         = useCircuitStore((s) => s.simResult);
+  const scopedComponentIds = useCircuitStore((s) => s.scopedComponentIds);
+  const toggleScope       = useCircuitStore((s) => s.toggleScope);
 
   const selected = components.find((c) => c.id === selectedId);
   const current  = running && selected ? (simResult.currents.get(selected.id) ?? 0) : null;
@@ -268,6 +276,16 @@ export default function Inspector() {
 
           {current !== null && ![...TRANSISTOR_TYPES, 'motor', 'servo', 'probe'].includes(selected.type) && (
             <div className="reading">current: {formatCurrent(current)}</div>
+          )}
+
+          {SCOPE_ELIGIBLE_TYPES.includes(selected.type) && (
+            <button
+              className="reset-button"
+              style={{ width: '100%', marginBottom: 8 }}
+              onClick={() => toggleScope(selected.id)}
+            >
+              {scopedComponentIds.includes(selected.id) ? 'Remove from Scope' : 'Add to Scope'}
+            </button>
           )}
 
           <button className="remove-button" onClick={() => removeElement(selected.id)}>Remove</button>

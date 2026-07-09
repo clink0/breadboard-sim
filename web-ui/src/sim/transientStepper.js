@@ -132,14 +132,16 @@ export function createTransientStepper() {
 
     // Commit companion state from the just-solved v - an exact identity
     // given this step's {geq, ihist}, not an approximation.
+    const reactiveCurrents = new Map();
     for (const el of reactive) {
       const { geq, ihist } = companion.get(el.id);
       const vNow = (v.get(el.nodeA) ?? 0) - (v.get(el.nodeB) ?? 0);
       const iNow = el.kind === 'C' ? geq * vNow - ihist : geq * vNow + ihist;
       reactiveState.set(el.id, { v: vNow, i: iNow });
+      reactiveCurrents.set(el.id, iNow);
     }
 
-    return { voltages: v, converged: stepConverged, sourceCurrents };
+    return { voltages: v, converged: stepConverged, sourceCurrents, reactiveCurrents };
   }
 
   return { step };

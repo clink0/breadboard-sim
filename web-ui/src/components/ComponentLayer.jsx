@@ -33,9 +33,35 @@ function holePos(holes, id) {
 function currentToAnim(current) {
   if (!current || Math.abs(current) < 1e-6) return null;
   const speed = Math.min(4, Math.max(0.4, Math.abs(current) * 40));
-  const duration = `${(1.4 / speed).toFixed(2)}s`;
+  const durationSeconds = 1.4 / speed;
   const keyPoints = current >= 0 ? '0;1' : '1;0';
-  return { duration, keyPoints };
+  return { durationSeconds, duration: `${durationSeconds.toFixed(2)}s`, keyPoints };
+}
+
+const DOT_COUNT = 3;
+
+// Falstad-style "flowing" look: several dots per energized path instead of
+// one, each started partway through the same animation (negative `begin`
+// starts a SMIL animation already in progress) so they read as an evenly
+// spaced train rather than a single blip.
+function CurrentDots({ anim, path }) {
+  if (!anim) return null;
+  return (
+    <>
+      {Array.from({ length: DOT_COUNT }, (_, i) => (
+        <circle key={i} r={3.2} className="current-dot">
+          <animateMotion
+            dur={anim.duration}
+            begin={`${(-(i / DOT_COUNT) * anim.durationSeconds).toFixed(2)}s`}
+            repeatCount="indefinite"
+            keyPoints={anim.keyPoints}
+            keyTimes="0;1"
+            path={path}
+          />
+        </circle>
+      ))}
+    </>
+  );
 }
 
 function centroid(points) {
@@ -261,8 +287,9 @@ export default function ComponentLayer({ holes }) {
         if (!a || !b) return null;
         const vA = voltageAt(w.fromHole);
         const color = running && vA !== null ? voltageToColor(vA) : 'var(--wire-idle)';
+        const energized = running && vA !== null && Math.abs(vA) > 0.05;
         return (
-          <g key={w.id} onClick={() => selectElement(w.id)}>
+          <g key={w.id} onClick={() => selectElement(w.id)} className={energized ? 'is-energized' : ''}>
             <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
               className={`wire-line ${selectedId === w.id ? 'is-selected' : ''}`}
               style={{ stroke: color }} />
@@ -296,19 +323,9 @@ export default function ComponentLayer({ holes }) {
             : [points[transistorTerminals[0]], points.source];
 
           return (
-            <g key={c.id} onClick={() => selectElement(c.id)} className={selectedId === c.id ? 'is-selected' : ''}>
+            <g key={c.id} onClick={() => selectElement(c.id)} className={`${selectedId === c.id ? 'is-selected' : ''} ${anim ? 'is-energized' : ''}`}>
               <ThreeLeadGlyph points={points} order={transistorTerminals} color={color} arrowLead={arrowLead} inward={inward} />
-              {anim && (
-                <circle r={2.6} className="current-dot">
-                  <animateMotion
-                    dur={anim.duration}
-                    repeatCount="indefinite"
-                    keyPoints={anim.keyPoints}
-                    keyTimes="0;1"
-                    path={`M ${dotFrom.x} ${dotFrom.y} L ${dotTo.x} ${dotTo.y}`}
-                  />
-                </circle>
-              )}
+              <CurrentDots anim={anim} path={`M ${dotFrom.x} ${dotFrom.y} L ${dotTo.x} ${dotTo.y}`} />
             </g>
           );
         }
@@ -316,7 +333,7 @@ export default function ComponentLayer({ holes }) {
         const [a, b] = positions;
 
         return (
-          <g key={c.id} onClick={() => selectElement(c.id)} className={selectedId === c.id ? 'is-selected' : ''}>
+          <g key={c.id} onClick={() => selectElement(c.id)} className={`${selectedId === c.id ? 'is-selected' : ''} ${anim ? 'is-energized' : ''}`}>
             <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
               className={`lead-line ${c.type === 'probe' ? 'is-probe-lead' : ''}`}
               style={{ stroke: color }} />
@@ -331,17 +348,7 @@ export default function ComponentLayer({ holes }) {
             {c.type === 'function_gen' && <FunctionGenGlyph x1={a.x} y1={a.y} x2={b.x} y2={b.y} color={color} />}
             {c.type === 'probe'     && <ProbeGlyph      x1={a.x} y1={a.y} x2={b.x} y2={b.y} color={color} />}
 
-            {anim && (
-              <circle r={2.6} className="current-dot">
-                <animateMotion
-                  dur={anim.duration}
-                  repeatCount="indefinite"
-                  keyPoints={anim.keyPoints}
-                  keyTimes="0;1"
-                  path={`M ${a.x} ${a.y} L ${b.x} ${b.y}`}
-                />
-              </circle>
-            )}
+            <CurrentDots anim={anim} path={`M ${a.x} ${a.y} L ${b.x} ${b.y}`} />
           </g>
         );
       })}

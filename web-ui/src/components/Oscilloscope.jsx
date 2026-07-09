@@ -1,12 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useCircuitStore } from '../state/circuitStore';
-import { channelColorForIndex } from '../utils/channelColors';
+import { componentValueSuffix } from '../utils/circuitContext';
 
-const WIDTH = 640;
-const HEIGHT = 160;
-const MARGIN = { top: 10, right: 12, bottom: 20, left: 44 };
-const PLOT_W = WIDTH - MARGIN.left - MARGIN.right;
-const PLOT_H = HEIGHT - MARGIN.top - MARGIN.bottom;
+const PANEL_W = 220;
+const PANEL_H = 90;
+const PAD = 6;
 
 function formatTime(seconds) {
   if (Math.abs(seconds) >= 1) return `${seconds.toFixed(2)}s`;
@@ -14,46 +12,79 @@ function formatTime(seconds) {
   return `${(seconds * 1e6).toFixed(1)}µs`;
 }
 
+// Maps a trace to its own [min,max] within the panel's plot height - each
+// trace (voltage/current) is normalized independently so both stay legible
+// regardless of unit/magnitude difference, matching Falstad's per-trace
+// auto-scaling rather than sharing one axis.
+function traceToPoints(time, arr, x) {
+  if (!arr || arr.length === 0) return { points: '', max: 0 };
+  let min = Infinity;
+  let max = -Infinity;
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i] < min) min = arr[i];
+    if (arr[i] > max) max = arr[i];
+  }
+  if (min === max) { min -= 0.5; max += 0.5; }
+  const span = max - min;
+  const y = (v) => PAD + (PANEL_H - 2 * PAD) - ((v - min) / span) * (PANEL_H - 2 * PAD);
+  const points = Array.from(arr, (v, i) => `${x(time[i]).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  return { points, max };
+}
+
+function ScopePanel({ item, time, voltages, currents, onRemove }) {
+  const [showCurrent, setShowCurrent] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
+
+  const vArr = voltages.get(item.id);
+  const iArr = currents.get(item.id);
+  const x = (t) => PAD + (t / (time[time.length - 1] || 1)) * (PANEL_W - 2 * PAD);
+
+  const { points: vPoints, max: vMax } = traceToPoints(time, vArr, x);
+  const { points: iPoints, max: iMax } = traceToPoints(time, iArr, x);
+
+  return (
+    <div className="scope-panel">
+      <div className="scope-panel-header">
+        <span className="scope-panel-max">
+          Max={vArr ? vMax.toFixed(3) : '—'} V
+          {showCurrent && iArr ? ` / ${(iMax * 1000).toFixed(3)} mA` : ''}
+        </span>
+        <div className="scope-panel-controls">
+          <button className="scope-panel-icon-button" onClick={() => setShowSettings((v) => !v)} title="Settings" aria-label="Settings">⚙</button>
+          <button className="scope-panel-icon-button" onClick={onRemove} title="Remove from scope" aria-label="Remove from scope">×</button>
+        </div>
+      </div>
+      <div className="scope-panel-label">{item.type}{componentValueSuffix(item)}</div>
+
+      {showSettings && (
+        <label className="scope-panel-settings">
+          <input type="checkbox" checked={showCurrent} onChange={(e) => setShowCurrent(e.target.checked)} />
+          Show current trace
+        </label>
+      )}
+
+      <svg viewBox={`0 0 ${PANEL_W} ${PANEL_H}`} className="scope-panel-svg" role="img" aria-label={`${item.type} trace`}>
+        <line x1={0} y1={PANEL_H / 2} x2={PANEL_W} y2={PANEL_H / 2} className="scope-panel-zero-line" />
+        {vPoints && <polyline points={vPoints} className="scope-panel-trace scope-panel-trace-voltage" />}
+        {showCurrent && iPoints && <polyline points={iPoints} className="scope-panel-trace scope-panel-trace-current" />}
+      </svg>
+    </div>
+  );
+}
+
 export default function Oscilloscope() {
   const components = useCircuitStore((s) => s.components);
+  const scopedComponentIds = useCircuitStore((s) => s.scopedComponentIds);
   const scopeResult = useCircuitStore((s) => s.scopeResult);
   const runCapture = useCircuitStore((s) => s.runCapture);
+  const toggleScope = useCircuitStore((s) => s.toggleScope);
+  const removeElement = useCircuitStore((s) => s.removeElement);
 
-  const probes = components.filter((c) => c.type === 'probe');
-  const { time, probeVoltages, converged, firstDivergedStep } = scopeResult;
+  const { time, voltages, currents, converged, firstDivergedStep } = scopeResult;
+  const scopedItems = components.filter((c) => c.type === 'probe' || scopedComponentIds.includes(c.id));
 
-  const tMin = time[0];
-  const tMax = time[time.length - 1] || 1;
-  const tSpan = tMax - tMin || 1;
-
-  let vMin = Infinity;
-  let vMax = -Infinity;
-  for (const probe of probes) {
-    const arr = probeVoltages.get(probe.id);
-    if (!arr) continue;
-    for (let i = 0; i < arr.length; i++) {
-      if (arr[i] < vMin) vMin = arr[i];
-      if (arr[i] > vMax) vMax = arr[i];
-    }
-  }
-  if (!isFinite(vMin) || !isFinite(vMax)) {
-    vMin = 0;
-    vMax = 5;
-  } else if (vMin === vMax) {
-    vMin -= 0.5;
-    vMax += 0.5;
-  } else {
-    const pad = (vMax - vMin) * 0.15;
-    vMin -= pad;
-    vMax += pad;
-  }
-  const vSpan = vMax - vMin;
-
-  const x = (t) => MARGIN.left + ((t - tMin) / tSpan) * PLOT_W;
-  const y = (v) => MARGIN.top + PLOT_H - ((v - vMin) / vSpan) * PLOT_H;
-
-  const gridRows = 4;
-  const gridCols = 6;
+  const tSpan = time.length > 1 ? time[time.length - 1] - time[0] : 0;
+  const dt = time.length > 1 ? time[1] - time[0] : 0;
 
   return (
     <div className="oscilloscope">
@@ -65,58 +96,28 @@ export default function Oscilloscope() {
               ⚠ did not converge
             </span>
           )}
+          {tSpan > 0 && (
+            <span className="oscilloscope-readout">t = {formatTime(tSpan)} &middot; step = {formatTime(dt)}</span>
+          )}
           <button className="run-button" onClick={runCapture}>Capture</button>
         </div>
       </div>
 
-      {probes.length === 0 ? (
-        <p className="empty-hint">Place a scope probe to capture a trace here.</p>
+      {scopedItems.length === 0 ? (
+        <p className="empty-hint">Place a scope probe, or select a component and hit "Add to Scope", to see a trace here.</p>
       ) : (
-        <>
-          <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} preserveAspectRatio="none" className="oscilloscope-svg" role="img" aria-label="Oscilloscope trace">
-            {Array.from({ length: gridRows + 1 }, (_, i) => {
-              const gy = MARGIN.top + (i * PLOT_H) / gridRows;
-              const v = vMax - (i * vSpan) / gridRows;
-              return (
-                <g key={`row-${i}`}>
-                  <line x1={MARGIN.left} y1={gy} x2={MARGIN.left + PLOT_W} y2={gy} className="scope-grid-line" />
-                  <text x={MARGIN.left - 6} y={gy} className="scope-axis-label" textAnchor="end" dominantBaseline="middle">
-                    {v.toFixed(2)}V
-                  </text>
-                </g>
-              );
-            })}
-            {Array.from({ length: gridCols + 1 }, (_, i) => {
-              const gx = MARGIN.left + (i * PLOT_W) / gridCols;
-              const t = tMin + (i * tSpan) / gridCols;
-              return (
-                <g key={`col-${i}`}>
-                  <line x1={gx} y1={MARGIN.top} x2={gx} y2={MARGIN.top + PLOT_H} className="scope-grid-line" />
-                  <text x={gx} y={HEIGHT - 4} className="scope-axis-label" textAnchor="middle">
-                    {formatTime(t)}
-                  </text>
-                </g>
-              );
-            })}
-
-            {probes.map((probe, i) => {
-              const arr = probeVoltages.get(probe.id);
-              if (!arr) return null;
-              const points = Array.from(arr, (v, idx) => `${x(time[idx]).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-              return (
-                <polyline key={probe.id} points={points} className="scope-trace" style={{ stroke: channelColorForIndex(i) }} />
-              );
-            })}
-          </svg>
-          <div className="oscilloscope-legend">
-            {probes.map((probe, i) => (
-              <span key={probe.id} className="scope-legend-item">
-                <span className="channel-swatch" style={{ background: channelColorForIndex(i) }} />
-                ch {i + 1}
-              </span>
-            ))}
-          </div>
-        </>
+        <div className="scope-panel-grid">
+          {scopedItems.map((item) => (
+            <ScopePanel
+              key={item.id}
+              item={item}
+              time={time}
+              voltages={voltages}
+              currents={currents}
+              onRemove={() => (item.type === 'probe' ? removeElement(item.id) : toggleScope(item.id))}
+            />
+          ))}
+        </div>
       )}
     </div>
   );

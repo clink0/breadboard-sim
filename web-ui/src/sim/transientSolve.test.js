@@ -2,6 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { solveTransient } from './transientSolve';
 import { functionGenValueAt } from './devices/functionSource';
 
+function sampleAt(time, trace, targetT) {
+  let idx = 0;
+  for (let i = 0; i < time.length; i++) if (time[i] <= targetT) idx = i;
+  return trace[idx];
+}
+
 describe('solveTransient - RC charging', () => {
   it('matches V0*(1-exp(-t/RC)) for a battery charging a capacitor through a resistor', () => {
     const V0 = 9;
@@ -13,29 +19,33 @@ describe('solveTransient - RC charging', () => {
 
     const elements = [
       { kind: 'V', id: 'batt', nodeA: 'vcc', nodeB: 'gnd', valueAt: () => V0 },
-      { kind: 'R', nodeA: 'vcc', nodeB: 'cap', value: R },
+      { kind: 'R', id: 'r1', nodeA: 'vcc', nodeB: 'cap', value: R },
       { kind: 'C', id: 'c1', nodeA: 'cap', nodeB: 'gnd', value: C },
       { kind: 'probe', id: 'p1', terminals: { tip: 'cap', ref: 'gnd' } },
     ];
 
-    const { time, probeVoltages, converged } = solveTransient(elements, 'gnd', dt, numSteps);
+    const { time, voltages, currents, converged } = solveTransient(elements, 'gnd', dt, numSteps);
     expect(converged).toBe(true);
 
-    const trace = probeVoltages.get('p1');
-    const sampleAt = (targetT) => {
-      let idx = 0;
-      for (let i = 0; i < time.length; i++) if (time[i] <= targetT) idx = i;
-      return trace[idx];
-    };
+    const trace = voltages.get('p1');
+    expect(sampleAt(time, trace, RC)).toBeCloseTo(V0 * (1 - Math.exp(-1)), 1);
+    expect(sampleAt(time, trace, 2 * RC)).toBeCloseTo(V0 * (1 - Math.exp(-2)), 1);
+    expect(sampleAt(time, trace, 5 * RC)).toBeCloseTo(V0 * (1 - Math.exp(-5)), 1);
 
-    expect(sampleAt(RC)).toBeCloseTo(V0 * (1 - Math.exp(-1)), 1);
-    expect(sampleAt(2 * RC)).toBeCloseTo(V0 * (1 - Math.exp(-2)), 1);
-    expect(sampleAt(5 * RC)).toBeCloseTo(V0 * (1 - Math.exp(-5)), 1);
+    // Series loop: charging current I(t) = (V0/R)*exp(-t/RC), and by KCL the
+    // same current flows into the capacitor - both should be tracked and
+    // agree with each other and with the resistor's own analytic formula.
+    const iR = currents.get('r1');
+    const iC = currents.get('c1');
+    const expectedI = (t) => (V0 / R) * Math.exp(-t / RC);
+    expect(sampleAt(time, iR, RC)).toBeCloseTo(expectedI(RC), 2);
+    expect(sampleAt(time, iC, RC)).toBeCloseTo(expectedI(RC), 2);
+    expect(sampleAt(time, iR, 2 * RC)).toBeCloseTo(expectedI(2 * RC), 2);
   });
 });
 
 describe('solveTransient - RL charging', () => {
-  it('matches V0*(1-exp(-t*R/L)) probed across the resistor', () => {
+  it('matches V0*(1-exp(-t*R/L)) probed across the resistor, and I(t)=(V0/R)*(1-exp(-tR/L)) through it', () => {
     const V0 = 9;
     const R = 100;
     const L = 0.1;
@@ -45,24 +55,27 @@ describe('solveTransient - RL charging', () => {
 
     const elements = [
       { kind: 'V', id: 'batt', nodeA: 'vcc', nodeB: 'gnd', valueAt: () => V0 },
-      { kind: 'R', nodeA: 'vcc', nodeB: 'mid', value: R },
+      { kind: 'R', id: 'r1', nodeA: 'vcc', nodeB: 'mid', value: R },
       { kind: 'L', id: 'l1', nodeA: 'mid', nodeB: 'gnd', value: L },
       { kind: 'probe', id: 'p1', terminals: { tip: 'vcc', ref: 'mid' } }, // v_R(t)
     ];
 
-    const { time, probeVoltages, converged } = solveTransient(elements, 'gnd', dt, numSteps);
+    const { time, voltages, currents, converged } = solveTransient(elements, 'gnd', dt, numSteps);
     expect(converged).toBe(true);
 
-    const trace = probeVoltages.get('p1');
-    const sampleAt = (targetT) => {
-      let idx = 0;
-      for (let i = 0; i < time.length; i++) if (time[i] <= targetT) idx = i;
-      return trace[idx];
-    };
+    const trace = voltages.get('p1');
+    expect(sampleAt(time, trace, tau)).toBeCloseTo(V0 * (1 - Math.exp(-1)), 1);
+    expect(sampleAt(time, trace, 2 * tau)).toBeCloseTo(V0 * (1 - Math.exp(-2)), 1);
+    expect(sampleAt(time, trace, 5 * tau)).toBeCloseTo(V0 * (1 - Math.exp(-5)), 1);
 
-    expect(sampleAt(tau)).toBeCloseTo(V0 * (1 - Math.exp(-1)), 1);
-    expect(sampleAt(2 * tau)).toBeCloseTo(V0 * (1 - Math.exp(-2)), 1);
-    expect(sampleAt(5 * tau)).toBeCloseTo(V0 * (1 - Math.exp(-5)), 1);
+    // Series loop again: the resistor's and inductor's currents must agree
+    // (same loop current) and match the textbook RL step-response formula.
+    const iR = currents.get('r1');
+    const iL = currents.get('l1');
+    const expectedI = (t) => (V0 / R) * (1 - Math.exp((-t * R) / L));
+    expect(sampleAt(time, iR, tau)).toBeCloseTo(expectedI(tau), 2);
+    expect(sampleAt(time, iL, tau)).toBeCloseTo(expectedI(tau), 2);
+    expect(sampleAt(time, iR, 5 * tau)).toBeCloseTo(expectedI(5 * tau), 2);
   });
 });
 
@@ -78,10 +91,10 @@ describe('solveTransient - function generator + probe', () => {
       { kind: 'probe', id: 'p1', terminals: { tip: 'sig', ref: 'gnd' } },
     ];
 
-    const { time, probeVoltages, converged } = solveTransient(elements, 'gnd', dt, numSteps);
+    const { time, voltages, converged } = solveTransient(elements, 'gnd', dt, numSteps);
     expect(converged).toBe(true);
 
-    const trace = probeVoltages.get('p1');
+    const trace = voltages.get('p1');
     for (let i = 0; i <= numSteps; i++) {
       expect(trace[i]).toBeCloseTo(functionGenValueAt(time[i], params), 6);
     }
@@ -110,10 +123,10 @@ describe('solveTransient - RC low-pass filter', () => {
       { kind: 'probe', id: 'p1', terminals: { tip: 'out', ref: 'gnd' } },
     ];
 
-    const { time, probeVoltages, converged } = solveTransient(elements, 'gnd', dt, numSteps);
+    const { time, voltages, converged } = solveTransient(elements, 'gnd', dt, numSteps);
     expect(converged).toBe(true);
 
-    const trace = probeVoltages.get('p1');
+    const trace = voltages.get('p1');
     const settleSteps = Math.round((settlePeriods * period) / dt);
     let min = Infinity, max = -Infinity, sum = 0, count = 0;
     for (let i = settleSteps; i <= numSteps; i++) {

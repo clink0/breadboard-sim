@@ -1,11 +1,13 @@
 // Maps a voltage (relative to the circuit's ground reference) to a color.
-// Cool blue for low/negative, neutral slate at 0V, warm amber/red for high.
-// This is deliberately a *different* palette than falstad's red/green so it
-// doesn't just read as a clone - but the concept (color = potential) is the
-// same idea.
-const LOW = [86, 148, 214]; // #5694D6 cool blue
-const MID = [148, 155, 168]; // #949BA8 neutral slate
-const HIGH = [232, 122, 46]; // #E87A2E warm amber
+// Falstad-style spectrum: vivid red for negative, a dark near-void gray at
+// 0V (reads as "nothing interesting here" against the darkened canvas - see
+// global.css), vivid green for positive. An earlier version deliberately
+// used a different blue/amber palette to avoid reading as a clone - the
+// user explicitly asked for this to look like Falstad, which supersedes
+// that choice.
+const LOW = [217, 58, 58]; // vivid red
+const MID = [46, 50, 58]; // dark neutral, close to the darkened canvas void
+const HIGH = [64, 214, 96]; // vivid green
 
 function lerp(a, b, t) {
   return a + (b - a) * t;

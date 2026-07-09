@@ -54,18 +54,21 @@ describe('buildCircuitContext', () => {
 
   it('mentions a captured oscilloscope trace', () => {
     const text = buildCircuitContext({
+      components: [{ id: 'p1', type: 'probe', holes: { tip: 'a-1', ref: 'a-2' } }],
       scopeResult: {
         time: new Float64Array([0, 0.01, 0.02]),
-        probeVoltages: new Map([['p1', new Float64Array([0, 1, 2])]]),
+        voltages: new Map([['p1', new Float64Array([0, 1, 2])]]),
+        currents: new Map([['p1', new Float64Array([0, 0, 0])]]),
         converged: true,
       },
     });
-    expect(text).toContain('Oscilloscope: captured 1 probe channel(s) over 20.00ms');
+    expect(text).toContain('Oscilloscope: captured 1 probe channel(s)');
+    expect(text).toContain('over 20.00ms');
   });
 
   it('omits the oscilloscope line when nothing has been captured', () => {
     const text = buildCircuitContext({
-      scopeResult: { time: new Float64Array([0]), probeVoltages: new Map(), converged: true },
+      scopeResult: { time: new Float64Array([0]), voltages: new Map(), currents: new Map(), converged: true },
     });
     expect(text).not.toContain('Oscilloscope:');
   });
