@@ -2,12 +2,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const verifyIdTokenMock = vi.fn();
 
-vi.mock('firebase-admin', () => ({
-  default: {
-    initializeApp: vi.fn(),
-    credential: { cert: vi.fn() },
-    auth: () => ({ verifyIdToken: verifyIdTokenMock }),
-  },
+// Mocks the modular firebase-admin/app + firebase-admin/auth imports (see
+// lib/firebaseAdmin.js) - this mirrors the real ESM entry points firebase-
+// admin actually documents, not its legacy default-namespace import. An
+// earlier version of this mock shaped itself after the legacy `import
+// admin from 'firebase-admin'` style, which is exactly the interop gap
+// firebaseAdmin.js hit in production ("Cannot read properties of undefined
+// (reading 'cert')") - the mock papered over the real bug instead of
+// catching it.
+vi.mock('firebase-admin/app', () => ({
+  initializeApp: vi.fn(() => ({})),
+  cert: vi.fn(),
+}));
+vi.mock('firebase-admin/auth', () => ({
+  getAuth: () => ({ verifyIdToken: verifyIdTokenMock }),
 }));
 
 process.env.FIREBASE_SERVICE_ACCOUNT_BASE64 = Buffer.from(JSON.stringify({ project_id: 'test' })).toString('base64');
