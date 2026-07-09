@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useCircuitStore } from './state/circuitStore';
 import { useArduinoStore } from './state/arduinoStore';
+import { useAuthStore } from './state/authStore';
 import { useAvrLiveRun } from './arduino/useAvrLiveRun';
 import TopBar from './components/TopBar';
 import Palette from './components/Palette';
@@ -21,6 +22,9 @@ export default function App() {
   // running sketch keeps driving the breadboard live even while the user is
   // browsing tutorials.
   const { led12Ref, led13Ref } = useAvrLiveRun(hex, running);
+
+  const initAuth = useAuthStore((s) => s.init);
+  useEffect(() => { initAuth(); }, [initAuth]);
 
   return (
     <div className="app-shell">

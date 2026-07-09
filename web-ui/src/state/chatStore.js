@@ -4,6 +4,7 @@ import { useArduinoStore } from './arduinoStore';
 import { buildCircuitContext } from '../utils/circuitContext';
 import { validateCircuitPatch } from '../utils/validateCircuitPatch';
 import { findShortedComponents } from '../utils/detectShorts';
+import { API_BASE } from '../utils/apiBase';
 
 // Only {role, content} is meaningful to the API - assistant messages also
 // carry a local-only `applied` summary (see applyActions below) for the
@@ -91,7 +92,7 @@ export const useChatStore = create((set, get) => ({
     });
 
     try {
-      const res = await fetch('/api/chat', {
+      const res = await fetch(`${API_BASE}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: toApiMessages(messages), circuitContext }),

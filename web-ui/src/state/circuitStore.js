@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { simulateCircuit, captureTransient } from '../sim/simulate';
-import { TERMINALS } from './deviceTerminals';
+import { TERMINALS } from 'shared/deviceTerminals.js';
 import { DEVICE_TYPES } from '../sim/devices';
 import { findShortedComponents } from '../utils/detectShorts';
 

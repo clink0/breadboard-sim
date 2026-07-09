@@ -1,8 +1,9 @@
-import { TERMINALS } from '../../src/state/deviceTerminals.js';
+import { TERMINALS } from 'shared/deviceTerminals.js';
 
-// Plain data module (no React/zustand), safe to import from server code -
-// keeps the tool's component-type enum in sync with what the app actually
-// supports instead of hardcoding a second list that can drift.
+// Plain data module (no React/zustand), lives in the shared/ workspace so
+// both web-ui and backend can import it without reaching across a monorepo
+// package boundary - keeps the tool's component-type enum in sync with what
+// the app actually supports instead of hardcoding a second list that can drift.
 const COMPONENT_TYPES = Object.keys(TERMINALS).filter((t) => t !== 'wire');
 
 // The one tool the AI tutor can call: add components/wires to the

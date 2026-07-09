@@ -1,5 +1,5 @@
 import { resolveTopology } from '../breadboard/topology';
-import { TERMINALS } from '../state/deviceTerminals';
+import { TERMINALS } from 'shared/deviceTerminals.js';
 
 // Flags any component in a proposed patch whose terminals resolve to the
 // same electrical node - e.g. a resistor placed with both leads in the same

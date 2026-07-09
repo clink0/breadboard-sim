@@ -1,5 +1,5 @@
 // A real Intel HEX file compiled (via arduino-cli, arduino:avr:uno) from
-// src/arduino/starterSketch.js's classic Blink-on-LED_BUILTIN sketch.
+// shared/starterSketch.js's classic Blink-on-LED_BUILTIN sketch.
 // Captured once and checked in so avrRuntime.test.js can verify the CPU
 // emulator's main loop without requiring arduino-cli in every environment
 // that runs the test suite.

@@ -1,4 +1,4 @@
-import { TERMINALS } from '../state/deviceTerminals';
+import { TERMINALS } from 'shared/deviceTerminals.js';
 import { isValidHoleId } from '../breadboard/holeValidation';
 
 export const COMPONENT_TYPES = new Set(Object.keys(TERMINALS).filter((t) => t !== 'wire'));

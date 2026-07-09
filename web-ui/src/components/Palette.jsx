@@ -1,6 +1,6 @@
 import React from 'react';
 import { useCircuitStore } from '../state/circuitStore';
-import { TERMINALS } from '../state/deviceTerminals';
+import { TERMINALS } from 'shared/deviceTerminals.js';
 
 const SECTIONS = [
   {

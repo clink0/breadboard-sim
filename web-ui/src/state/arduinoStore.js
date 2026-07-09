@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { STARTER_SKETCH } from '../arduino/starterSketch';
+import { STARTER_SKETCH } from 'shared/starterSketch.js';
+import { API_BASE } from '../utils/apiBase';
 
 export const useArduinoStore = create((set, get) => ({
   sketch: STARTER_SKETCH,
@@ -14,7 +15,7 @@ export const useArduinoStore = create((set, get) => ({
   setRunning: (running) => set({ running }),
 
   fetchToolchainStatus: async () => {
-    const res = await fetch('/api/toolchain-status');
+    const res = await fetch(`${API_BASE}/api/toolchain-status`);
     const toolchain = await res.json();
     set({ toolchain });
     return toolchain;
@@ -24,7 +25,7 @@ export const useArduinoStore = create((set, get) => ({
     const { sketch } = get();
     set({ compileStatus: 'compiling', running: false });
     try {
-      const res = await fetch('/api/compile', {
+      const res = await fetch(`${API_BASE}/api/compile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ source: sketch }),

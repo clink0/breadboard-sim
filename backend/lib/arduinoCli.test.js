@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { compileSketch, getToolchainStatus } from './arduinoCli.js';
-import { STARTER_SKETCH } from '../../src/arduino/starterSketch.js';
+import { STARTER_SKETCH } from 'shared/starterSketch.js';
 
 describe('arduino-cli compile server', () => {
   it('compiles the default Blink sketch into a non-empty Intel HEX file', async () => {
