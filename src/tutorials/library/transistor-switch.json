@@ -1,0 +1,64 @@
+{
+  "id": "transistor-switch",
+  "schemaVersion": 1,
+  "title": "Switch a motor with a transistor",
+  "description": "Use an NPN transistor to let a small base current control a much larger current through a DC motor — the core idea behind every transistor switch.",
+  "difficulty": "intermediate",
+  "author": "Breadboard Sim Team",
+  "requiresArduino": false,
+  "featured": true,
+  "steps": [
+    {
+      "id": "step-1",
+      "instructions": "Place the battery — this powers the whole circuit.",
+      "addComponents": [
+        { "type": "battery", "value": 5, "holes": { "pos": "railTopPlus-3", "neg": "railTopMinus-3" } }
+      ],
+      "addWires": [],
+      "sketch": null
+    },
+    {
+      "id": "step-2",
+      "instructions": "Add the DC motor between the + rail and column 10 — this is the load the transistor will switch on and off.",
+      "addComponents": [
+        { "type": "motor", "value": 15, "holes": { "a": "railTopPlus-10", "b": "b-10" } }
+      ],
+      "addWires": [],
+      "sketch": null
+    },
+    {
+      "id": "step-3",
+      "instructions": "Place the NPN transistor. Collector picks up the motor's free end (column 10), base is the control input (column 12), emitter will return to ground.",
+      "addComponents": [
+        { "type": "bjt_npn", "value": "NPN_SMALL_SIGNAL", "holes": { "collector": "d-10", "base": "c-12", "emitter": "a-13" } }
+      ],
+      "addWires": [],
+      "sketch": null
+    },
+    {
+      "id": "step-4",
+      "instructions": "Wire the emitter to the − rail to complete the ground return.",
+      "addComponents": [],
+      "addWires": [
+        { "fromHole": "a-13", "toHole": "railTopMinus-13" }
+      ],
+      "sketch": null
+    },
+    {
+      "id": "step-5",
+      "instructions": "Add a base resistor from the + rail to the transistor's base column. This is the small control current that switches the much larger motor current.",
+      "addComponents": [
+        { "type": "resistor", "value": 1000, "holes": { "a": "railTopPlus-12", "b": "d-12" } }
+      ],
+      "addWires": [],
+      "sketch": null
+    },
+    {
+      "id": "step-6",
+      "instructions": "Hit Simulate and watch the motor spin. Click the transistor in the Inspector — Ib (base current) is tiny compared to Ic (collector/motor current). That amplification is the whole point of a transistor switch.",
+      "addComponents": [],
+      "addWires": [],
+      "sketch": null
+    }
+  ]
+}

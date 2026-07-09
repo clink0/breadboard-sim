@@ -1,0 +1,55 @@
+{
+  "id": "led-blink-basic",
+  "schemaVersion": 1,
+  "title": "Light an LED with a resistor",
+  "description": "The classic first circuit: a battery, a current-limiting resistor, and an LED. Learn why the resistor is there and watch current flow once you hit Simulate.",
+  "difficulty": "beginner",
+  "author": "Breadboard Sim Team",
+  "requiresArduino": false,
+  "featured": true,
+  "steps": [
+    {
+      "id": "step-1",
+      "instructions": "Start with power. Select Battery in the palette, click a hole on the top + rail, then click the hole directly below it on the top − rail. This is our 5V source.",
+      "addComponents": [
+        { "type": "battery", "value": 5, "holes": { "pos": "railTopPlus-3", "neg": "railTopMinus-3" } }
+      ],
+      "addWires": [],
+      "sketch": null
+    },
+    {
+      "id": "step-2",
+      "instructions": "An LED can only handle a small amount of current before it burns out, so we limit it with a resistor. Select Resistor, click a hole on the + rail, then click a hole in the terminal strip below it.",
+      "addComponents": [
+        { "type": "resistor", "value": 220, "holes": { "a": "railTopPlus-8", "b": "a-8" } }
+      ],
+      "addWires": [],
+      "sketch": null
+    },
+    {
+      "id": "step-3",
+      "instructions": "Now the LED itself. Select LED, click first for the anode (+, current flows in) in the same column as the resistor's free end, then click for the cathode (−) one column over.",
+      "addComponents": [
+        { "type": "led", "value": null, "holes": { "anode": "b-8", "cathode": "c-9" } }
+      ],
+      "addWires": [],
+      "sketch": null
+    },
+    {
+      "id": "step-4",
+      "instructions": "Complete the loop back to the battery. Select Wire and connect the LED's cathode column to the − rail.",
+      "addComponents": [],
+      "addWires": [
+        { "fromHole": "c-9", "toHole": "railTopMinus-9" }
+      ],
+      "sketch": null
+    },
+    {
+      "id": "step-5",
+      "instructions": "Hit Simulate in the top bar. The LED should light up and you'll see an animated dot showing current direction. With 5V and a 220Ω resistor, Ohm's law says roughly (5V − ~2V LED drop) / 220Ω ≈ 14mA is flowing — click the resistor or LED in the Inspector to check the real reading.",
+      "addComponents": [],
+      "addWires": [],
+      "sketch": null
+    }
+  ]
+}

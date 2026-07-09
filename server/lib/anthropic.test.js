@@ -13,13 +13,13 @@ describe('sendChatMessage', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    const reply = await sendChatMessage({
+    const result = await sendChatMessage({
       apiKey: 'test-key',
       system: 'be a tutor',
       messages: [{ role: 'user', content: 'what does this resistor do?' }],
     });
 
-    expect(reply).toBe('Hello there!');
+    expect(result).toEqual({ text: 'Hello there!', toolCalls: [] });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, options] = fetchMock.mock.calls[0];
     expect(url).toBe('https://api.anthropic.com/v1/messages');
@@ -29,6 +29,7 @@ describe('sendChatMessage', () => {
     expect(body.system).toBe('be a tutor');
     expect(body.messages).toEqual([{ role: 'user', content: 'what does this resistor do?' }]);
     expect(body.model).toMatch(/claude/);
+    expect(body.tools).toBeUndefined();
   });
 
   it('joins multiple text content blocks', async () => {
@@ -37,8 +38,32 @@ describe('sendChatMessage', () => {
       json: async () => ({ content: [{ type: 'text', text: 'part one. ' }, { type: 'text', text: 'part two.' }] }),
     }));
 
-    const reply = await sendChatMessage({ apiKey: 'k', system: 's', messages: [] });
-    expect(reply).toBe('part one. part two.');
+    const result = await sendChatMessage({ apiKey: 'k', system: 's', messages: [] });
+    expect(result.text).toBe('part one. part two.');
+    expect(result.toolCalls).toEqual([]);
+  });
+
+  it('includes tools in the request body when provided, and extracts tool_use blocks', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        content: [
+          { type: 'text', text: 'Sure, adding it now.' },
+          { type: 'tool_use', id: 'toolu_1', name: 'modify_circuit', input: { addWires: [{ fromHole: 'a-1', toHole: 'b-1' }] } },
+        ],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const tools = [{ name: 'modify_circuit', description: 'd', input_schema: { type: 'object' } }];
+    const result = await sendChatMessage({ apiKey: 'k', system: 's', messages: [], tools });
+
+    expect(result.text).toBe('Sure, adding it now.');
+    expect(result.toolCalls).toEqual([
+      { name: 'modify_circuit', input: { addWires: [{ fromHole: 'a-1', toHole: 'b-1' }] } },
+    ]);
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.tools).toEqual(tools);
   });
 
   it('throws with the API-provided message on a non-2xx response', async () => {

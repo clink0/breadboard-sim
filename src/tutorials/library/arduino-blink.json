@@ -1,0 +1,60 @@
+{
+  "id": "arduino-blink",
+  "schemaVersion": 1,
+  "title": "Blink an LED from Arduino code",
+  "description": "Wire an LED to a digital pin, then write the code that blinks it. Watch the breadboard react live to the sketch you just compiled.",
+  "difficulty": "beginner",
+  "author": "Breadboard Sim Team",
+  "requiresArduino": true,
+  "featured": true,
+  "steps": [
+    {
+      "id": "step-1",
+      "instructions": "Select Resistor and wire it from Arduino pin D13 to a hole in the breadboard's terminal strip — this limits the current the pin has to supply.",
+      "addComponents": [
+        { "type": "resistor", "value": 220, "holes": { "a": "arduino-D13", "b": "a-15" } }
+      ],
+      "addWires": [],
+      "sketch": null
+    },
+    {
+      "id": "step-2",
+      "instructions": "Add the LED in series. Anode toward the resistor (same column), cathode one column over.",
+      "addComponents": [
+        { "type": "led", "value": null, "holes": { "anode": "b-15", "cathode": "c-16" } }
+      ],
+      "addWires": [],
+      "sketch": null
+    },
+    {
+      "id": "step-3",
+      "instructions": "Complete the path back to the Arduino with a wire from the LED's cathode column to the Arduino's GND pin.",
+      "addComponents": [],
+      "addWires": [
+        { "fromHole": "c-16", "toHole": "arduino-GND" }
+      ],
+      "sketch": null
+    },
+    {
+      "id": "step-4",
+      "instructions": "Switch to the Arduino IDE tab. This sketch configures pin 13 as an output — nothing happens yet, but it's the setup every digitalWrite() needs first.",
+      "addComponents": [],
+      "addWires": [],
+      "sketch": "void setup() {\n  pinMode(13, OUTPUT);\n}\n\nvoid loop() {\n}\n"
+    },
+    {
+      "id": "step-5",
+      "instructions": "Now make it blink: turn the pin on, wait a second, turn it off, wait a second, and repeat forever inside loop().",
+      "addComponents": [],
+      "addWires": [],
+      "sketch": "void setup() {\n  pinMode(13, OUTPUT);\n}\n\nvoid loop() {\n  digitalWrite(13, HIGH);\n  delay(1000);\n  digitalWrite(13, LOW);\n  delay(1000);\n}\n"
+    },
+    {
+      "id": "step-6",
+      "instructions": "Click Compile, then Run. Switch back to the Breadboard view — your wired LED should blink in sync with the code, driven live by the simulated AVR chip.",
+      "addComponents": [],
+      "addWires": [],
+      "sketch": null
+    }
+  ]
+}

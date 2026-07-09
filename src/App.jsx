@@ -9,19 +9,26 @@ import Inspector from './components/Inspector';
 import Oscilloscope from './components/Oscilloscope';
 import ArduinoView from './components/ArduinoView';
 import PanZoomCanvas from './components/PanZoomCanvas';
+import ShortPlacementWarning from './components/ShortPlacementWarning';
+import TutorialsPage from './components/TutorialsPage';
 
 export default function App() {
+  const page = useCircuitStore((s) => s.page);
   const view = useCircuitStore((s) => s.view);
   const hex = useArduinoStore((s) => s.hex);
   const running = useArduinoStore((s) => s.running);
-  // Always mounted (not inside ArduinoView) so a running sketch keeps
-  // driving the breadboard live even while the user is looking at it.
+  // Always mounted (not inside ArduinoView, and regardless of `page`) so a
+  // running sketch keeps driving the breadboard live even while the user is
+  // browsing tutorials.
   const { led12Ref, led13Ref } = useAvrLiveRun(hex, running);
 
   return (
     <div className="app-shell">
+      <ShortPlacementWarning />
       <TopBar />
-      {view === 'breadboard' ? (
+      {page === 'tutorials' ? (
+        <TutorialsPage />
+      ) : view === 'breadboard' ? (
         <div className="app-body">
           <Palette />
           <main className="board-stage">

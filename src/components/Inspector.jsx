@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useCircuitStore } from '../state/circuitStore';
 import { DEVICE_TYPES } from '../sim/devices';
 import { channelColorForIndex } from '../utils/channelColors';
@@ -6,6 +6,7 @@ import {
   formatOhms, formatFarads, formatHenry, formatCurrent, formatVoltage, formatSiemens, formatFrequency,
 } from '../utils/formatUnits';
 import TutorChat from './TutorChat';
+import TutorialPanel from './TutorialPanel';
 
 const RESISTOR_PRESETS  = [100, 220, 330, 1000, 4700, 10000];
 const BATTERY_PRESETS   = [1.5, 3.3, 5, 9, 12];
@@ -32,7 +33,11 @@ function PresetButtons({ presets, value, onSelect }) {
 }
 
 export default function Inspector() {
-  const [activeTab, setActiveTab] = useState('inspector'); // 'inspector' | 'tutor'
+  // Lifted into circuitStore (not local state) so other UI - e.g.
+  // ShortPlacementWarning's "ask AI to fix this" - can jump straight to the
+  // AI Tutor tab.
+  const activeTab          = useCircuitStore((s) => s.inspectorTab);
+  const setActiveTab       = useCircuitStore((s) => s.setInspectorTab);
   const components        = useCircuitStore((s) => s.components);
   const wires             = useCircuitStore((s) => s.wires);
   const selectedId        = useCircuitStore((s) => s.selectedId);
@@ -63,11 +68,17 @@ export default function Inspector() {
         >
           AI Tutor
         </button>
+        <button
+          className={`inspector-tab ${activeTab === 'tutorials' ? 'is-active' : ''}`}
+          onClick={() => setActiveTab('tutorials')}
+        >
+          Tutorials
+        </button>
       </div>
 
-      {activeTab === 'tutor' ? (
-        <TutorChat />
-      ) : (
+      {activeTab === 'tutor' && <TutorChat />}
+      {activeTab === 'tutorials' && <TutorialPanel />}
+      {activeTab === 'inspector' && (
       <>
       {selected ? (
         <div className="selected-panel">

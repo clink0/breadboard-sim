@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { simulateCircuit, captureTransient } from '../sim/simulate';
 import { TERMINALS } from './deviceTerminals';
 import { DEVICE_TYPES } from '../sim/devices';
+import { findShortedComponents } from '../utils/detectShorts';
 
 const EMPTY_SCOPE_RESULT = { time: new Float64Array([0]), probeVoltages: new Map(), converged: true, firstDivergedStep: null };
 
@@ -26,22 +27,31 @@ export const COMPONENT_DEFAULTS = {
 };
 
 export const useCircuitStore = create((set, get) => ({
+  page: 'workspace', // 'workspace' | 'tutorials' - top-level app page, set via the BrandMenu hover dropdown. Distinct from `view` below (that's the breadboard/arduino sub-view *within* the workspace page).
   view: 'breadboard', // 'breadboard' | 'arduino'
+  inspectorTab: 'inspector', // 'inspector' | 'tutor' | 'tutorials' - lifted out of Inspector's own state so other UI (e.g. ShortPlacementWarning) can jump to the AI Tutor tab
   tool: 'wire', // 'wire' | 'resistor' | 'led' | 'battery' | ...
   pendingHoles: [], // holes clicked so far, waiting for the tool's remaining terminals
   components: [], // { id, type, value, holes: { [terminalName]: holeId } }
   wires: [], // { id, fromHole, toHole }
   selectedId: null,
+  shortWarning: null, // { type, holes, problems } when a just-attempted manual placement would short itself - see clickHole
   simResult: { voltages: new Map(), currents: new Map(), deviceInfo: new Map(), converged: true, nodeFor: () => null },
   running: false,
   liveSource: null, // null | 'dc' | 'arduino' - which of DC Simulate / Arduino live-run is currently driving `running`/`simResult`
   scopeResult: EMPTY_SCOPE_RESULT,
 
+  setPage: (page) => set({ page }),
+
   setView: (view) => set({ view }),
+
+  setInspectorTab: (inspectorTab) => set({ inspectorTab }),
 
   setTool: (tool) => set({ tool, pendingHoles: [] }),
 
   selectElement: (id) => set({ selectedId: id }),
+
+  dismissShortWarning: () => set({ shortWarning: null }),
 
   clickHole: (holeId) => {
     const { tool, pendingHoles } = get();
@@ -57,18 +67,41 @@ export const useCircuitStore = create((set, get) => ({
       return;
     }
 
-    const id = nextId();
     if (tool === 'wire') {
+      const id = nextId();
       set((s) => ({ wires: [...s.wires, { id, fromHole: clicked[0], toHole: clicked[1] }], pendingHoles: [] }));
-    } else {
-      const defaults = COMPONENT_DEFAULTS[tool];
-      const holes = Object.fromEntries(terminalNames.map((name, i) => [name, clicked[i]]));
-      set((s) => ({
-        components: [...s.components, { id, type: tool, value: defaults.value, holes }],
-        pendingHoles: [],
-      }));
+      return;
     }
+
+    const defaults = COMPONENT_DEFAULTS[tool];
+    const holes = Object.fromEntries(terminalNames.map((name, i) => [name, clicked[i]]));
+    const candidate = { type: tool, value: defaults.value, holes };
+
+    // Same self-short check the AI tutor's proposed placements go through
+    // (src/utils/detectShorts.js) - a component whose own leads land on the
+    // same node isn't a solver error, it silently does nothing, so it's
+    // worth catching here too rather than only for AI-driven placement.
+    const problems = findShortedComponents(get().wires, { addComponents: [candidate] });
+    if (problems.length > 0) {
+      set({ pendingHoles: [], shortWarning: { type: tool, holes, problems } });
+      return;
+    }
+
+    const id = nextId();
+    set((s) => ({
+      components: [...s.components, { id, ...candidate }],
+      pendingHoles: [],
+    }));
   },
+
+  // Bulk-appends prebuilt components/wires (e.g. a tutorial step's expected
+  // circuit), minting fresh ids via the same counter click-placement uses so
+  // they never collide with elements the user placed by hand.
+  applyElements: ({ components = [], wires = [] } = {}) =>
+    set((s) => ({
+      components: [...s.components, ...components.map((c) => ({ ...c, id: nextId() }))],
+      wires: [...s.wires, ...wires.map((w) => ({ ...w, id: nextId() }))],
+    })),
 
   updateComponentValue: (id, value) =>
     set((s) => ({
@@ -87,6 +120,7 @@ export const useCircuitStore = create((set, get) => ({
     wires: [],
     pendingHoles: [],
     selectedId: null,
+    shortWarning: null,
     running: false,
     liveSource: null,
     simResult: { voltages: new Map(), currents: new Map(), deviceInfo: new Map(), converged: true, nodeFor: () => null },

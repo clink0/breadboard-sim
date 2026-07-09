@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { sendChatMessage } from '../lib/anthropic.js';
 import { TUTOR_SYSTEM_PROMPT } from '../lib/tutorPersona.js';
+import { CIRCUIT_TOOLS } from '../lib/circuitTools.js';
 
 export const chatRouter = Router();
 
@@ -36,8 +37,8 @@ chatRouter.post('/chat', async (req, res) => {
     : TUTOR_SYSTEM_PROMPT;
 
   try {
-    const reply = await sendChatMessage({ apiKey, system, messages });
-    res.status(200).json({ success: true, reply });
+    const { text, toolCalls } = await sendChatMessage({ apiKey, system, messages, tools: CIRCUIT_TOOLS });
+    res.status(200).json({ success: true, reply: text, actions: toolCalls });
   } catch (err) {
     console.error('Unexpected chat server error:', err);
     res.status(500).json({ success: false, error: 'internal-error', message: 'The AI tutor hit an unexpected error.' });
