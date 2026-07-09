@@ -4,6 +4,17 @@ Everything after local dev is working, to get both halves of the app live. Like 
 
 The repo is a monorepo (`web-ui/`, `backend/`, `shared/`) - the one thing every step below hinges on is telling each host *which folder* it's actually deploying.
 
+## Before pushing: run a real production build locally
+
+`npm run dev` (Vite's dev server) and `npm run build` (a real production bundle) exercise different code paths - some plugin/bundling issues only surface in the latter (we hit exactly this once: `vite-plugin-monaco-editor` broke only under `vite build`'s `writeBundle` hook, never in dev, and only got caught on an actual Vercel deploy). Before pushing something you expect to deploy cleanly:
+
+```
+npm run build
+npx vite preview --port 4173  # from web-ui/, or add a root-level script if you do this often
+```
+
+Click through the app against the preview server - a clean `vite build` exit code isn't sufficient on its own, load the page and confirm nothing throws in the console.
+
 ## Order matters
 
 Deploy the **backend first**. The frontend's `VITE_API_BASE_URL` needs the backend's real URL to point at, so there's nothing to configure on the Vercel side until the backend already has a live URL.
