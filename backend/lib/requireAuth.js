@@ -23,6 +23,12 @@ export async function requireAuth(req, res, next) {
       console.error(err.message);
       return res.status(503).json({ success: false, error: 'auth-not-configured', message: 'Server auth is not configured yet.' });
     }
+    // Log the real reason verifyIdToken rejected this - without this, every
+    // rejection (expired token, wrong project, bad service account, clock
+    // skew, ...) looks identical from the client's side ("Sign in
+    // required."), which made a real misconfiguration here impossible to
+    // diagnose remotely.
+    console.error('verifyIdToken rejected a token:', err.message);
     res.status(401).json({ success: false, error: 'unauthorized', message: 'Sign in required.' });
   }
 }
