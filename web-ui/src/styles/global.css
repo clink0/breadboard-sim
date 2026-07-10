@@ -1,12 +1,7 @@
 :root {
-  --bg: #12141a;
-  --panel: #1a1d25;
-  --panel-border: #2a2e39;
-  --text: #e8e9ed;
-  --text-dim: #8b8f9c;
-  --copper: #e8a33d;
-  --cyan: #57c7e3;
-  --danger: #e0645c;
+  /* Component/wire color-coding is part of the breadboard's own visual
+     identity (like its cream body) and stays fixed across every color
+     scheme below - only the app chrome (bg/panel/text/accent) is themed. */
   --board-cream: #ede7d3;
   --board-cream-dark: #ddd5ba;
   --wire-idle: #c8a870;
@@ -22,8 +17,55 @@
   --function-gen-idle: #c77dff;
   --probe-idle: #d8dce6;
 
+  /* The oscilloscope trace panel is deliberately a fixed dark "scope
+     screen" regardless of theme, same reasoning as the breadboard colors
+     above - these are its text colors, not app chrome. */
+  --scope-text: #d8dce6;
+  --scope-text-dim: #8b8f9c;
+  --scope-hover-overlay: rgba(255, 255, 255, 0.08);
+
   --font-ui: 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* Theme (app chrome) variables - selected on the Profile page and applied
+   via [data-theme] on <html> (see src/state/themeStore.js). "sand" is the
+   default; "slate" is the original dark blue-grey look, kept as an option. */
+:root,
+:root[data-theme='sand'] {
+  --bg: #ecdfb8;
+  --panel: #e2cf9f;
+  --panel-border: #6b4a2b;
+  --text: #3a2a16;
+  --text-dim: #8a7350;
+  --copper: #e8630f;
+  --cyan: #1f7fa0;
+  --danger: #b8382b;
+  --overlay-subtle: rgba(0, 0, 0, 0.05);
+  --overlay-hover: rgba(0, 0, 0, 0.07);
+  --overlay-strong: rgba(0, 0, 0, 0.1);
+  --copper-tint: rgba(232, 99, 15, 0.14);
+  --copper-tint-strong: rgba(232, 99, 15, 0.4);
+  --danger-tint: rgba(184, 56, 43, 0.12);
+  --cyan-tint: rgba(31, 127, 160, 0.14);
+}
+
+:root[data-theme='slate'] {
+  --bg: #12141a;
+  --panel: #1a1d25;
+  --panel-border: #2a2e39;
+  --text: #e8e9ed;
+  --text-dim: #8b8f9c;
+  --copper: #e8a33d;
+  --cyan: #57c7e3;
+  --danger: #e0645c;
+  --overlay-subtle: rgba(255, 255, 255, 0.04);
+  --overlay-hover: rgba(255, 255, 255, 0.06);
+  --overlay-strong: rgba(255, 255, 255, 0.08);
+  --copper-tint: rgba(232, 163, 61, 0.12);
+  --copper-tint-strong: rgba(232, 163, 61, 0.35);
+  --danger-tint: rgba(224, 100, 92, 0.1);
+  --cyan-tint: rgba(87, 199, 227, 0.12);
 }
 
 * { box-sizing: border-box; }
@@ -110,7 +152,7 @@ body {
 }
 
 .brand-dropdown-item:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--overlay-hover);
 }
 
 .brand-dropdown-item.is-active {
@@ -250,13 +292,13 @@ button {
 
 .tutor-message-user {
   align-self: flex-end;
-  background: rgba(232, 163, 61, 0.14);
-  border: 1px solid rgba(232, 163, 61, 0.35);
+  background: var(--copper-tint);
+  border: 1px solid var(--copper-tint-strong);
 }
 
 .tutor-message-assistant {
   align-self: flex-start;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--overlay-subtle);
   border: 1px solid var(--panel-border);
 }
 
@@ -328,7 +370,7 @@ button {
   padding: 8px 10px;
   border: 1px solid var(--danger);
   border-radius: 8px;
-  background: rgba(224, 100, 92, 0.1);
+  background: var(--danger-tint);
   font-size: 12px;
 }
 
@@ -371,7 +413,7 @@ button {
 .tutor-markdown code {
   font-family: var(--font-mono);
   font-size: 0.92em;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--overlay-strong);
   border-radius: 4px;
   padding: 0.1em 0.35em;
 }
@@ -471,7 +513,7 @@ button {
 
 .tool-button.is-active {
   border-color: var(--copper);
-  background: rgba(232, 163, 61, 0.1);
+  background: var(--copper-tint);
 }
 
 .tool-label {
@@ -597,16 +639,15 @@ button {
   height: 100%;
   overflow: hidden;
   cursor: grab;
-  /* Darkened toward Falstad's near-black void - the breadboard body itself
-     (.board-body below) keeps its own cream color, that's the part of this
-     app's identity as a *breadboard* simulator worth keeping recognizable;
-     only the surrounding canvas changes. */
-  background-color: #08090c;
+  /* The original blue editor canvas - fixed regardless of the app's color
+     scheme (like the breadboard's own cream body below), not part of the
+     themeable chrome. */
+  background-color: #1863b3;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.16) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
   background-repeat: repeat;
 }
 
@@ -948,7 +989,7 @@ button {
 .scope-panel-max {
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--text);
+  color: var(--scope-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -962,7 +1003,7 @@ button {
 
 .scope-panel-icon-button {
   background: transparent;
-  color: var(--text-dim);
+  color: var(--scope-text-dim);
   border: none;
   border-radius: 4px;
   width: 20px;
@@ -973,13 +1014,13 @@ button {
 }
 
 .scope-panel-icon-button:hover {
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--scope-text);
+  background: var(--scope-hover-overlay);
 }
 
 .scope-panel-label {
   font-size: 10.5px;
-  color: var(--text-dim);
+  color: var(--scope-text-dim);
   margin-bottom: 4px;
 }
 
@@ -988,7 +1029,7 @@ button {
   align-items: center;
   gap: 6px;
   font-size: 10.5px;
-  color: var(--text-dim);
+  color: var(--scope-text-dim);
   margin-bottom: 4px;
 }
 
@@ -1076,7 +1117,7 @@ button {
 }
 
 .toolchain-banner {
-  background: rgba(224, 100, 92, 0.1);
+  background: var(--danger-tint);
   border: 1px solid var(--danger);
   border-radius: 6px;
   padding: 10px 14px;
@@ -1173,12 +1214,12 @@ button {
 
 .tutorial-badge-builtin {
   color: var(--copper);
-  background: rgba(232, 163, 61, 0.12);
+  background: var(--copper-tint);
 }
 
 .tutorial-badge-community {
   color: var(--cyan);
-  background: rgba(87, 199, 227, 0.12);
+  background: var(--cyan-tint);
 }
 
 .tutorial-card-desc {
@@ -1364,4 +1405,58 @@ button {
   gap: 6px;
   font-size: 12px;
   color: var(--text-dim);
+}
+
+.profile-section {
+  margin: 18px 0 28px;
+  max-width: 520px;
+}
+
+.theme-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.theme-swatch-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: 200px;
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  color: var(--text);
+  text-align: left;
+}
+
+.theme-swatch-button.is-active {
+  border-color: var(--copper);
+  background: var(--copper-tint);
+}
+
+.theme-swatch-preview {
+  display: flex;
+  width: 100%;
+  height: 32px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--panel-border);
+}
+
+.theme-swatch-chip {
+  flex: 1;
+}
+
+.theme-swatch-label {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.theme-swatch-desc {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.4;
 }

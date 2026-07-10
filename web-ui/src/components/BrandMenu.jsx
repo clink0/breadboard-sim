@@ -6,6 +6,7 @@ import { useCircuitStore } from '../state/circuitStore';
 const PAGES = [
   { id: 'workspace', label: 'Workspace' },
   { id: 'tutorials', label: 'Tutorials' },
+  { id: 'profile', label: 'Profile' },
 ];
 
 // Pure CSS :hover reveal (see .brand-menu/.brand-dropdown in global.css) -

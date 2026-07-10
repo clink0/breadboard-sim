@@ -3,6 +3,7 @@ import { useCircuitStore } from './state/circuitStore';
 import { useArduinoStore } from './state/arduinoStore';
 import { useAuthStore } from './state/authStore';
 import { useTutorialStore } from './state/tutorialStore';
+import { useThemeStore } from './state/themeStore';
 import { useAvrLiveRun } from './arduino/useAvrLiveRun';
 import TopBar from './components/TopBar';
 import Palette from './components/Palette';
@@ -13,6 +14,7 @@ import ArduinoView from './components/ArduinoView';
 import PanZoomCanvas from './components/PanZoomCanvas';
 import ShortPlacementWarning from './components/ShortPlacementWarning';
 import TutorialsPage from './components/TutorialsPage';
+import ProfilePage from './components/ProfilePage';
 
 export default function App() {
   const page = useCircuitStore((s) => s.page);
@@ -26,6 +28,9 @@ export default function App() {
 
   const initAuth = useAuthStore((s) => s.init);
   useEffect(() => { initAuth(); }, [initAuth]);
+
+  const initTheme = useThemeStore((s) => s.init);
+  useEffect(() => { initTheme(); }, [initTheme]);
 
   // Loaded once at startup (not just when TutorialsPage mounts) so anything
   // that can jump straight into a tutorial without visiting that page first
@@ -61,6 +66,8 @@ export default function App() {
       <TopBar />
       {page === 'tutorials' ? (
         <TutorialsPage />
+      ) : page === 'profile' ? (
+        <ProfilePage />
       ) : view === 'breadboard' ? (
         <div className="app-body">
           <Palette />
