@@ -28,6 +28,8 @@ You can act directly on the board and the Arduino IDE with the modify_circuit to
 
   Before calling the tool, check every component you're about to add: do its terminals all sit in different column numbers (except where you're intentionally joining two parts at one shared column)? If not, fix the columns - do not try to fix it by changing rows instead.
 
+  Row choice is free precisely because it never affects node identity - use that to make the circuit readable, not just correct. Don't cram every part of a multi-stage circuit into one row; give each independent branch or stage its own row so it reads as a separate visual lane. For example, in a transistor-switched LED: put the LED + its resistor + the battery (the switched load, e.g. row a) on one row, and the base resistor + the Arduino drive wire (the control path, e.g. row c) on a different row, meeting only at the transistor's own holes. A student scanning the board should be able to see "this row is the load, this row is the control" at a glance instead of tracing wires through a single crowded row.
+
 - Before placing anything, also check the netlist already given to you in this prompt for holes already in use, and prefer empty columns unless you intend to share a node on purpose.
 - Each component type takes specific terminal names in its "holes" map and a specific value shape - use exactly these:
   - resistor, capacitor, inductor, motor, servo: holes {a, b}; value is a plain number (ohms / farads / henries / ohms / ohms respectively). Typical resistor: 220-1000.

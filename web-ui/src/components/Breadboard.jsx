@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { generateHoles, boardDimensions, HOLE_PITCH } from '../breadboard/layout';
 import { generateArduinoHoles, arduinoBoardDimensions } from '../breadboard/arduinoLayout';
 import { useCircuitStore } from '../state/circuitStore';
+import { useElementDrag } from '../breadboard/useElementDrag';
 import ComponentLayer from './ComponentLayer';
 import ArduinoBoard from './ArduinoBoard';
 
@@ -26,6 +27,9 @@ export default function Breadboard() {
   const pendingHoles = useCircuitStore((s) => s.pendingHoles);
   const clickHole = useCircuitStore((s) => s.clickHole);
 
+  const groupRef = useRef(null);
+  const { ghost, onComponentMouseDown, onWireMouseDown } = useElementDrag({ holes, groupRef });
+
   const pad = 24;
 
   return (
@@ -37,7 +41,7 @@ export default function Breadboard() {
       role="img"
       aria-label="Virtual breadboard"
     >
-      <g transform={`translate(${pad}, ${pad})`}>
+      <g ref={groupRef} transform={`translate(${pad}, ${pad})`}>
         <rect x={-10} y={-10} width={bbWidth + 20} height={bbHeight + 20} rx={10} className="board-body" />
 
         {/* rail stripes for visual read-ability, like the red/blue lines on a real board */}
@@ -52,7 +56,7 @@ export default function Breadboard() {
             <line key={`stripe-minus-${h.row}`} x1={h.x - HOLE_PITCH / 2} x2={breadboardHoles.filter((x) => x.row === h.row).slice(-1)[0].x + HOLE_PITCH / 2} y1={h.y + 6} y2={h.y + 6} className="rail-stripe rail-stripe-minus" />
           ))}
 
-        <ComponentLayer holes={holes} />
+        <ComponentLayer holes={holes} ghost={ghost} onComponentMouseDown={onComponentMouseDown} onWireMouseDown={onWireMouseDown} />
 
         {breadboardHoles.map((h) => (
           <circle

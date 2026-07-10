@@ -42,8 +42,10 @@ clean, and the MNA solver is checked against a known voltage-divider circuit
    the natural next simulation feature and is where the current-flow
    visualization gets genuinely dynamic (charging curves, RC time
    constants, etc.) rather than a static snapshot.
-4. **No undo/multi-select/drag-to-reposition** — placement is click-hole,
-   click-hole only.
+4. **No undo/multi-select** — placement is click-hole, click-hole. Components
+   and wires can be dragged to a new position (column-only for components,
+   per-endpoint for wires) and deleted via Delete/Backspace once selected,
+   but only one element at a time.
 5. **No 3D view yet** — this scaffold is the 2D schematic/breadboard view
    only, matching the "core simulator + visualizer" phase. The 3D
    physical-breadboard view (withdiode-style) is the next phase, and should

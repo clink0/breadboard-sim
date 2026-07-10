@@ -265,13 +265,30 @@ function ThreeLeadGlyph({ points, order, color, arrowLead, inward }) {
   );
 }
 
-export default function ComponentLayer({ holes }) {
+// The type-specific glyph for a plain 2-lead component - factored out so the
+// live drag ghost can render the exact same shape as the real component
+// instead of duplicating this switch.
+function TwoLeadGlyph({ type, x1, y1, x2, y2, color, current, lit }) {
+  switch (type) {
+    case 'resistor': return <ResistorGlyph x1={x1} y1={y1} x2={x2} y2={y2} color={color} />;
+    case 'led': return <LedGlyph x1={x1} y1={y1} x2={x2} y2={y2} color={color} lit={lit} />;
+    case 'battery': return <BatteryGlyph x1={x1} y1={y1} x2={x2} y2={y2} color={color} />;
+    case 'capacitor': return <CapacitorGlyph x1={x1} y1={y1} x2={x2} y2={y2} color={color} />;
+    case 'inductor': return <InductorGlyph x1={x1} y1={y1} x2={x2} y2={y2} color={color} />;
+    case 'motor': return <MotorGlyph x1={x1} y1={y1} x2={x2} y2={y2} color={color} current={current} />;
+    case 'servo': return <ServoGlyph x1={x1} y1={y1} x2={x2} y2={y2} color={color} current={current} />;
+    case 'function_gen': return <FunctionGenGlyph x1={x1} y1={y1} x2={x2} y2={y2} color={color} />;
+    case 'probe': return <ProbeGlyph x1={x1} y1={y1} x2={x2} y2={y2} color={color} />;
+    default: return null;
+  }
+}
+
+export default function ComponentLayer({ holes, ghost, onComponentMouseDown, onWireMouseDown }) {
   const components = useCircuitStore((s) => s.components);
   const wires      = useCircuitStore((s) => s.wires);
   const running    = useCircuitStore((s) => s.running);
   const simResult  = useCircuitStore((s) => s.simResult);
   const selectedId = useCircuitStore((s) => s.selectedId);
-  const selectElement = useCircuitStore((s) => s.selectElement);
 
   const voltageAt = (holeId) => {
     if (!running) return null;
@@ -289,7 +306,7 @@ export default function ComponentLayer({ holes }) {
         const color = running && vA !== null ? voltageToColor(vA) : 'var(--wire-idle)';
         const energized = running && vA !== null && Math.abs(vA) > 0.05;
         return (
-          <g key={w.id} onClick={() => selectElement(w.id)} className={energized ? 'is-energized' : ''}>
+          <g key={w.id} onMouseDown={(e) => onWireMouseDown(w, e)} className={energized ? 'is-energized' : ''}>
             <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
               className={`wire-line ${selectedId === w.id ? 'is-selected' : ''}`}
               style={{ stroke: color }} />
@@ -323,7 +340,7 @@ export default function ComponentLayer({ holes }) {
             : [points[transistorTerminals[0]], points.source];
 
           return (
-            <g key={c.id} onClick={() => selectElement(c.id)} className={`${selectedId === c.id ? 'is-selected' : ''} ${anim ? 'is-energized' : ''}`}>
+            <g key={c.id} onMouseDown={(e) => onComponentMouseDown(c, e)} className={`${selectedId === c.id ? 'is-selected' : ''} ${anim ? 'is-energized' : ''}`}>
               <ThreeLeadGlyph points={points} order={transistorTerminals} color={color} arrowLead={arrowLead} inward={inward} />
               <CurrentDots anim={anim} path={`M ${dotFrom.x} ${dotFrom.y} L ${dotTo.x} ${dotTo.y}`} />
             </g>
@@ -333,25 +350,53 @@ export default function ComponentLayer({ holes }) {
         const [a, b] = positions;
 
         return (
-          <g key={c.id} onClick={() => selectElement(c.id)} className={`${selectedId === c.id ? 'is-selected' : ''} ${anim ? 'is-energized' : ''}`}>
+          <g key={c.id} onMouseDown={(e) => onComponentMouseDown(c, e)} className={`${selectedId === c.id ? 'is-selected' : ''} ${anim ? 'is-energized' : ''}`}>
             <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
               className={`lead-line ${c.type === 'probe' ? 'is-probe-lead' : ''}`}
               style={{ stroke: color }} />
 
-            {c.type === 'resistor'  && <ResistorGlyph  x1={a.x} y1={a.y} x2={b.x} y2={b.y} color={color} />}
-            {c.type === 'led'       && <LedGlyph        x1={a.x} y1={a.y} x2={b.x} y2={b.y} color={color} lit={lit} />}
-            {c.type === 'battery'   && <BatteryGlyph    x1={a.x} y1={a.y} x2={b.x} y2={b.y} color={color} />}
-            {c.type === 'capacitor' && <CapacitorGlyph  x1={a.x} y1={a.y} x2={b.x} y2={b.y} color={color} />}
-            {c.type === 'inductor'  && <InductorGlyph   x1={a.x} y1={a.y} x2={b.x} y2={b.y} color={color} />}
-            {c.type === 'motor'     && <MotorGlyph      x1={a.x} y1={a.y} x2={b.x} y2={b.y} color={color} current={current} />}
-            {c.type === 'servo'     && <ServoGlyph      x1={a.x} y1={a.y} x2={b.x} y2={b.y} color={color} current={current} />}
-            {c.type === 'function_gen' && <FunctionGenGlyph x1={a.x} y1={a.y} x2={b.x} y2={b.y} color={color} />}
-            {c.type === 'probe'     && <ProbeGlyph      x1={a.x} y1={a.y} x2={b.x} y2={b.y} color={color} />}
+            <TwoLeadGlyph type={c.type} x1={a.x} y1={a.y} x2={b.x} y2={b.y} color={color} current={current} lit={lit} />
 
             <CurrentDots anim={anim} path={`M ${a.x} ${a.y} L ${b.x} ${b.y}`} />
           </g>
         );
       })}
+
+      {ghost?.kind === 'component' && (() => {
+        const holeIds = Object.values(ghost.holes);
+        const positions = holeIds.map((id) => holePos(holes, id));
+        if (positions.some((p) => !p)) return null;
+        const transistorTerminals = TRANSISTOR_TERMINALS[ghost.type];
+        if (transistorTerminals) {
+          const points = Object.fromEntries(transistorTerminals.map((name) => [name, holePos(holes, ghost.holes[name])]));
+          const isBjt = ghost.type.startsWith('bjt_');
+          const arrowLead = isBjt ? 'emitter' : 'source';
+          const inward = ghost.type === 'bjt_pnp' || ghost.type === 'mosfet_p';
+          return (
+            <g className="drag-ghost">
+              <ThreeLeadGlyph points={points} order={transistorTerminals} color="var(--copper)" arrowLead={arrowLead} inward={inward} />
+            </g>
+          );
+        }
+        const [a, b] = positions;
+        return (
+          <g className="drag-ghost">
+            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} className="lead-line" style={{ stroke: 'var(--copper)' }} />
+            <TwoLeadGlyph type={ghost.type} x1={a.x} y1={a.y} x2={b.x} y2={b.y} color="var(--copper)" />
+          </g>
+        );
+      })()}
+
+      {ghost?.kind === 'wire' && (() => {
+        const a = holePos(holes, ghost.fromHole);
+        const b = holePos(holes, ghost.toHole);
+        if (!a || !b) return null;
+        return (
+          <g className="drag-ghost">
+            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} className="wire-line" style={{ stroke: 'var(--copper)' }} />
+          </g>
+        );
+      })()}
     </g>
   );
 }

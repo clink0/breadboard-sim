@@ -116,6 +116,18 @@ export const useCircuitStore = create((set, get) => ({
       components: s.components.map((c) => (c.id === id ? { ...c, value } : c)),
     })),
 
+  // Drag-to-reposition commits - see breadboard/useElementDrag.js for the
+  // column-delta math and short-circuit guard that run before these are called.
+  moveComponent: (id, newHoles) =>
+    set((s) => ({
+      components: s.components.map((c) => (c.id === id ? { ...c, holes: newHoles } : c)),
+    })),
+
+  moveWireEndpoint: (id, endpoint, newHoleId) =>
+    set((s) => ({
+      wires: s.wires.map((w) => (w.id === id ? { ...w, [endpoint]: newHoleId } : w)),
+    })),
+
   removeElement: (id) =>
     set((s) => ({
       components: s.components.filter((c) => c.id !== id),
